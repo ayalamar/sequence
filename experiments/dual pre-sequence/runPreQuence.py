@@ -418,7 +418,8 @@ def addMouse(cfg):
  		     	[X,Y] = cfg['psyMouse'].getPos()
  		     	return [X/1.6*1.05,Y*1.05,time.time()]
       	  
-	  	cfg['mouse'] = myMouse()
+
+    cfg['mouse'] = myMouse()
   	
 	return(cfg)
 
