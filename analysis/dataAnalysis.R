@@ -107,7 +107,7 @@ getStatistics <- function(){
   RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
   summary(RM_pl)
   
-  # analyze reach aftereffects
+  # analyze reach aftereffects -- CONTINUE HERE
   baselineAE<- tdf %>% filter(task==1) %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
   block1AE<- tdf %>% filter(task==) %>% filter(trial %in% c(357,358,359)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
   adaptdf<- rbind(block1,blocklast)

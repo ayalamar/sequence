@@ -143,15 +143,7 @@ def runTrial(cfg):
 		#	cursorpos = rotatepos(point = cursorpos, ref = cfg['home'].pos, rotation = trialDef.Rotation)
 		
 		cfg['cursor'].pos = cursorpos
-		
-		# add data to mouse X / Y vectors, cursor X / Y vectors, time vector
-		cursorx_px.append(cursorpos[0]) 
-		cursory_px.append(cursorpos[1])
-		mousex_px.append(mousepos[0]) 
-		mousey_px.append(mousepos[1])
-		time_ms.append(mousepos[2]*1000)
-		step_vec.append(step)
-		
+
 		
 		if (step == -2):
 			# participant needs to go to the home position
@@ -294,6 +286,13 @@ def runTrial(cfg):
 				step = 6
 			
 		cfg['win'].flip()
+		# add data to mouse X / Y vectors, cursor X / Y vectors, time vector
+		cursorx_px.append(cursorpos[0]) 
+		cursory_px.append(cursorpos[1])
+		mousex_px.append(mousepos[0]) 
+		mousey_px.append(mousepos[1])
+		time_ms.append(mousepos[2]*1000)
+		step_vec.append(step)
 		
 
 		
