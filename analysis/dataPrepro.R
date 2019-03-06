@@ -4,7 +4,8 @@
 #setwd('/Users/mayala/Desktop/DATS')
 
 subject_numbers <- c(1,2)
-tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
+# tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
+tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8)
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
