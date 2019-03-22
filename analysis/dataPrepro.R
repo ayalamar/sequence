@@ -3,9 +3,9 @@
 ########################################
 #setwd('/Users/mayala/Desktop/DATS')
 
-subject_numbers <- c(1,2)
-# tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
-tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8)
+subject_numbers <- c(1,2,3,4,5,6,7,9,10,11,12,16) ## INPUT subject IDs
+#tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
+tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for dual explicit data only
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
@@ -176,6 +176,7 @@ tagOutliers <- function() {
     ppdf$isoutlier <- FALSE
     ppdf$isoutlier[which(ppdf$pv_angle_n %in% outlier_values)] <- TRUE
     ppdf$pv_angle_n[which(ppdf$isoutlier == TRUE)] <- NA
+    ppdf$pv_angle_n[which(ppdf$selection_1 != 1)] <- NA
     
     outfile_name = sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     

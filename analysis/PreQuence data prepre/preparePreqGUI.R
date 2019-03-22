@@ -2,10 +2,10 @@
 #### convert .csv experiment output to .txt 
 #### remove the headers 
 library(dplyr)
-subject_numbers <- c(1:10) # edit participant #s
+subject_numbers <- c(1:18) # edit participant #s
 
 # output txt file with no header
-for (subject in 1:length(subject_numbers)){
+for (subject in 1:length(subject_numbers)) {
 
   for (task in 0:12){
     
