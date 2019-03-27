@@ -1,10 +1,8 @@
 ######### MAKE CHANGES HERE ############
 ########################################
-setwd('/Users/mayala/Desktop/static data')
+setwd('/Users/mayala/Desktop/preq data')
 
-#subject_numbers <- c(1:7, 9:31) # consequence experiment
-#subject_numbers <- c(3:9, 11:17, 20:33) # sequence experiment
-#subject_numbers <- c(1:7, 9:31) # consequence experiment
+subject_numbers <- c(1:18) 
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
@@ -34,7 +32,7 @@ plotData <- function(){
   }
   
   tdf <- tbl_df(df) # convert to tibble for dplyr
-  rotations <- sort(unique(tdf$garage_location)) # use this because no-cursor trials are labeled rotation = 0
+  rotations <- sort(unique(tdf$prehome)) # use this because no-cursor trials are labeled rotation = 0
   
   for (rotationno in rotations) {
     print(rotationno)
@@ -46,7 +44,7 @@ plotData <- function(){
       print(dfname)
       
       ## NOTE: YOU NEED TO SUBTRACT baseline!!!! DO THIS HERE !! SUBTRACT PER ROTATION BASELINE VALUE
-      taskmeans<- tdf %>% filter(task==taskno) %>% filter(garage_location == rotationno) %>% group_by(participant) %>%
+      taskmeans<- tdf %>% filter(task==taskno) %>% filter(prehome == rotationno) %>% group_by(participant) %>%
         group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
                                       SEM_pl = SD_pl/sqrt(length(unique(participant))),
                                       Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
@@ -171,13 +169,13 @@ getStatistics <- function(){
   
   ########### visualize reach AEs for non-instructed (static) group
   static_tdf_NCs_rot <- static_tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0)
-  ggplot(static_tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(garage_location))) +
+  ggplot(static_tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(prehome))) +
     geom_boxplot() +
     ylim(-50, 50) +
     theme_classic() +
     ggtitle("No instruction (static) Dual Group")
   explicit_tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0)
-  ggplot(explicit_tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(garage_location))) +
+  ggplot(explicit_tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(prehome))) +
     geom_boxplot() +
     ylim(-50, 50) +
     theme_classic() +

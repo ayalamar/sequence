@@ -130,6 +130,9 @@ def runTrial(cfg):
 	time_ms    = []
 	step_vec   = []
 	
+	mousepos = cfg['mouse'].Pos()
+	trial_start_time = mousepos[2]*1000
+	
 	while (step < 6):
 		
 		# where would the cursor be?
@@ -143,7 +146,6 @@ def runTrial(cfg):
 		#	cursorpos = rotatepos(point = cursorpos, ref = cfg['home'].pos, rotation = trialDef.Rotation)
 		
 		cfg['cursor'].pos = cursorpos
-
 		
 		if (step == -2):
 			# participant needs to go to the home position
@@ -154,7 +156,7 @@ def runTrial(cfg):
 			
 			if cfg['mode'] == 'test':
 				cfg['cursor'].draw()
-			
+
 			# if distance between cursor and home position is lower than XYZ, move on to step -1 
 			# a = cursorx - homex ; b = cursory - homey ; c^2 = a^2 + b^2; c = distance between cursor and home
 			if sp.sqrt((cursorpos[0] - cfg['home'].pos[0])**2 + (cursorpos[1] - cfg['home'].pos[1])**2) < cfg['radius']:
@@ -286,13 +288,17 @@ def runTrial(cfg):
 				step = 6
 			
 		cfg['win'].flip()
+		
+				
 		# add data to mouse X / Y vectors, cursor X / Y vectors, time vector
 		cursorx_px.append(cursorpos[0]) 
 		cursory_px.append(cursorpos[1])
 		mousex_px.append(mousepos[0]) 
 		mousey_px.append(mousepos[1])
-		time_ms.append(mousepos[2]*1000)
+		time_ms.append((mousepos[2]*1000)-trial_start_time)
 		step_vec.append(step)
+		
+
 		
 
 		
@@ -316,7 +322,8 @@ def runTrial(cfg):
 		'trial': cfg['trialno'],
 		'prehome': trialDef.Prepos,
 		'prehomex_px': prehomepos[0],
-		'prehomey_px':prehomepos[1]}
+		'prehomey_px':prehomepos[1],
+		'instruction':cfg['blocks'][cfg['blockno']]['instruction'][22:29]}
 	
 	trialdata = pd.DataFrame(d)
 	
@@ -417,8 +424,7 @@ def addMouse(cfg):
  		     	[X,Y] = cfg['psyMouse'].getPos()
  		     	return [X/1.6*1.05,Y*1.05,time.time()]
       	  
-
-    cfg['mouse'] = myMouse()
+	  	cfg['mouse'] = myMouse()
   	
 	return(cfg)
 
@@ -491,9 +497,9 @@ def makeBlocks(cfg):
 	
 	
 	# counter-balance include(1)/exclude(0) strategy:
-	orderIndex = cfg['ppno'] % 4 # either 0 or 1
-	instrorder  = [[0,1],[1,0],[0,1],[1,0]][orderIndex]
-	preposorder = [[1,2],[2,1],[2,1],[1,2]][orderIndex]
+	orderIndex = cfg['ppno'] % 8 # 0,1,2,3,4,5,6 or 7
+	instrorder  = [[0,1,0,1],[1,0,1,0],[0,1,0,1],[1,0,1,0],[0,1,1,0],[1,0,0,1],[0,1,1,0],[1,0,0,1]][orderIndex]
+	preposorder = [[1,2,2,1],[2,1,1,2],[2,1,1,2],[1,2,2,1],[1,2,1,2],[2,1,2,1],[2,1,2,1],[1,2,1,2]][orderIndex] # this is for the tasks
 	
 	instruct = ['reach with cursor',
 				'reach without cursor',
@@ -506,15 +512,15 @@ def makeBlocks(cfg):
 		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[0]],
 		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[1]],
 		        'reach with cursor',
-		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[1]],
-		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[0]]
+		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[2]],
+		        ['reach without cursor (include strategy)', 'reach without cursor (exclude strategy)'][instrorder[3]]
 		        
 	]
 	
 	preposind[8] = preposorder[0]
 	preposind[9] = preposorder[1]
-	preposind[11] = preposorder[1]
-	preposind[12] = preposorder[0]
+	preposind[11] = preposorder[2]
+	preposind[12] = preposorder[3]
 	
 	for blockno in range(13): 
 		

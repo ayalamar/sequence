@@ -3,6 +3,17 @@
 #### remove the headers 
 library(dplyr)
 subject_numbers <- c(1:18) # edit participant #s
+#
+
+
+###
+
+## NOTE
+## NEED TO ADD COLUMN "INSTRUCTION" FOR PARTICIPANTS 1:18
+## FOR PARTICIPANTS 1:9 USE %% 4
+## FOR PARTICIPANTS 10:18 USE %% 8
+
+###
 
 # output txt file with no header
 for (subject in 1:length(subject_numbers)) {
@@ -13,7 +24,7 @@ for (subject in 1:length(subject_numbers)) {
     data <- read.csv(infile_name, header = TRUE)
 
     ## RESTART TIME STAMP FOR EVERY TRIAL
-    for (trialno in sort(unique(data$trial))){
+    for (trialno in sort(unique(data$trial))){ 
       #sample1<- data[which(data$trial == trialno),] 
       data$time_ms[which(data$trial == trialno)] <- data$time_ms[which(data$trial == trialno)] - data$time_ms[which(data$trial == trialno)][1] # need to fix
     }
@@ -40,9 +51,12 @@ for (subject in 1:length(subject_numbers)) {
             newpoint <- R %*% c(data$cursorx_px[sample],data$cursory_px[sample])
             data$cursorx_px[sample] <- newpoint[1] + ref[1]
             data$cursory_px[sample] <- newpoint[2] + ref[2]
+            
           }
           
         }
+        
+      
       }
     ## remove header for GUI compatibility
     outfile_name = sprintf('p0%02d-%d.txt', subject, task)

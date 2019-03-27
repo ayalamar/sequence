@@ -1,31 +1,22 @@
-######### MAKE CHANGES HERE ############
-########################################
-setwd('/Users/mayala/Desktop/explicit data')
-
-#subject_numbers <- c(3:9, 11:17, 20:33) # seq experiment
-#subject_numbers <- c(1:7, 9:31) ## conseq experiment
-subject_numbers <- c(1,2,3,4,5,6,7,9,10,11,12,16) ## explicit experiment
-#subject_numbers <- c(1:12) ## static experiment
-#tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
-tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
+########## FOR PREQ DATA SPECIFICALLY ##########
+setwd('/Users/mayala/Desktop/preq data')
+subject_numbers <- c(1:2) 
+tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
-
-######### END OF CHANGES  ##############
-########################################
 
 # TASK COMBINE SEQUENCE . M
 # AFTER having been selected, this combines all tasks per participant into one huge
 # participant file that includes ALL samples for every trial and block
 
 taskCombine <- function() {
+  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
     
     ppdf <- NA
-    
     
     for (taskno in tasks) {
       
@@ -36,9 +27,10 @@ taskCombine <- function() {
       
       taskdf <- read.table(filename, header = FALSE)
       
-      colnames(taskdf) <- c("trial","time","cursorx","cursory","handx","handy","rotation",
-                            "step","target_angle","targetx","targety","garage_location","garagex","garagey","homex","homey",
-                            "group","trial_type","selection_1","selection_2","selection_3","selection_peakvel","selection_unsure")
+      colnames(taskdf) <- c("cursorx","cursory","homex","homey","handx","handy","participant",
+                            "prehome", "prehomex", "prehomey", "rotation", "step", "target_angle",
+                            "targetx", "targety", "time", "trial", "selection_1","selection_2",
+                            "selection_3","selection_peakvel","selection_unsure")
       
       taskdf$participant <- subject_id
       taskdf$task <- taskno
@@ -56,60 +48,100 @@ taskCombine <- function() {
         trial_pathlength <- sum(sqrt(diff(trialsamples$cursorx)^2 + diff(trialsamples$cursory)^2))
         taskdf$pathlength[which(taskdf$trial == trialno)] <- trial_pathlength
         
-        # separate out labelling for implicit experiments and explicit experiment
-        if (max(tasks)==12) { ## THIS IS AN IMPLICIT EXPERIMENT
-          if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
-            # print include or exclude for no-cursor blocks 8,9 11,12
-            # if subject number is ODD, store exclude-include-include-exclude instruction sequence
-            # else, store include-exclude-include-exclude instruction sequence
-            taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 9)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 11)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 12)] <- 'exclude'
+        ## PARTICIPANTS BEFORE SUBJECT # 19 NEED TO HAVE CB PRINTED IN OUTPUT
+        if (unique(taskdf$participant) < 18.5) { 
+          
+          if (unique(taskdf$participant) < 9.5) {
             
-          } else { #this is an even-numbered participant
-            taskdf$instruction[which(taskdf$task == 8)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 11)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 12)] <- 'include'
+            orderIndex <- unique(taskdf$participant) %% 4
+            instrorder <- (list(c(0,1), c(1,0), c(0,1), c(1,0)))[orderIndex + 1] #python has it 0-indexed
+            
+            if (instrorder[[1]][1] == 0) {
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'include'
+              
+            } else {
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'exclude'
+              
+            }
+            
+          } else {
+            
+            orderIndex <- unique(taskdf$participant) %% 8
+            instrorder <- (list(c(0,1,0,1), c(1,0,1,0), c(0,1,0,1), c(1,0,1,0),
+                                c(0,1,1,0), c(1,0,0,1), c(0,1,1,0), c(1,0,0,1)))[orderIndex + 1]
+            instrorder1 <- list(c(0,1,0,1))
+            instrorder2 <- list(c(1,0,1,0))
+            instrorder3 <- list(c(0,1,1,0))
+            instrorder4 <- list(c(1,0,0,1))
+            
+            if (all.equal(instrorder, instrorder1) == TRUE) {
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'exclude'
+              
+            } else if (all.equal(instrorder, instrorder2) == TRUE) {
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'include'
+              
+            } else if (all.equal(instrorder, instrorder3) == TRUE) {
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'include'
+              
+            } else { # instrorder4
+              
+              taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
+              taskdf$instruction[which(taskdf$task == 9)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 11)] <- 'include'
+              taskdf$instruction[which(taskdf$task == 12)] <- 'exclude'
+              
+            }
+            
           }
           
-        } else { ## THIS IS AN EXPLICIT EXPERIMENT
-          if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
-            # for block 8, print 'exclude'
-            taskdf$instruction[which(taskdf$task == 4)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 5)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 7)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
-            
-          } else { #this is an even-numbered participant
-            taskdf$instruction[which(taskdf$task == 4)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 5)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 7)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 8)] <- 'include'
-          }
+        } else { 
+          print('this participant was run after fix')
+          ## THIS PARTICIPANT WAS RUN AFTER THE EXPERIMENT WAS FIXED - NO ADJUSTMENTS NEEDED
+          
+          
           
         }
         
       }
       
-      if (is.data.frame(ppdf)==TRUE) {
+  if (is.data.frame(ppdf)==TRUE) {
         
-        ppdf <- rbind(ppdf, taskdf)
+    ppdf <- rbind(ppdf, taskdf)
         
-      } else {
+  } else {
         
-        ppdf <- taskdf
+    ppdf <- taskdf
         
-      }
-    }
+  }
     
     outfile_name = sprintf('combined_p0%02d_%s.csv', subject_id, outfile_suffix)
-    write.csv(ppdf, file = outfile_name, row.names = FALSE)  
+    write.csv(ppdf, file = outfile_name, row.names = FALSE)
     
   }
   
 }
+}  
+
 
 # QUICK ANALYSIS SEQUENCE . M
 # After having been combined, this function subsets the variable(s) of interest and 

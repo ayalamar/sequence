@@ -1,13 +1,13 @@
 ######### MAKE CHANGES HERE ############
 ########################################
-setwd('/Users/mayala/Desktop/explicit data')
+setwd('/Users/mayala/Desktop/preq data')
 
 #subject_numbers <- c(3:9, 11:17, 20:33) # seq experiment
 #subject_numbers <- c(1:7, 9:31) ## conseq experiment
-subject_numbers <- c(1,2,3,4,5,6,7,9,10,11,12,16) ## explicit experiment
-#subject_numbers <- c(1:12) ## static experiment
-#tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
-tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
+#subject_numbers <- c(1,2,3,4,5,6,7,9,10,11,12,16) ## explicit experiment
+subject_numbers <- c(1:18) ## static experiment 1:12
+tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
+#tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
