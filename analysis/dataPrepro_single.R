@@ -1,31 +1,23 @@
-######### MAKE CHANGES HERE ############
-########################################
-setwd('/Users/mayala/Desktop/preq data')
+# for single CW and CCW
+setwd('/Users/mayala/Desktop/single CW data')
 
-#subject_numbers <- c(3:9, 11:17, 20:33) # seq experiment
-#subject_numbers <- c(1:7, 9:31) ## conseq experiment
-#subject_numbers <- c(1,2,3,4,5,6,7,9,10,11,12,16) ## explicit experiment
-subject_numbers <- c(1:18) ## static experiment 1:12
-tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
-#tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
+subject_numbers <- c(1:10) # same for CW & CCW
+tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
-
-######### END OF CHANGES  ##############
-########################################
 
 # TASK COMBINE SEQUENCE . M
 # AFTER having been selected, this combines all tasks per participant into one huge
 # participant file that includes ALL samples for every trial and block
 
 taskCombine <- function() {
+  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
     
     ppdf <- NA
-    
     
     for (taskno in tasks) {
       
@@ -51,46 +43,23 @@ taskCombine <- function() {
         # select only the one current trial for analysis
         trialsamples <- taskdf[ which(taskdf$trial == trialno), ]
         
-        # create empty column to store pathlength values
-        
         trial_pathlength <- sum(sqrt(diff(trialsamples$cursorx)^2 + diff(trialsamples$cursory)^2))
         taskdf$pathlength[which(taskdf$trial == trialno)] <- trial_pathlength
-        
-        # separate out labelling for implicit experiments and explicit experiment
-        if (max(tasks)==12) { ## THIS IS AN IMPLICIT EXPERIMENT
-          if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
-            # print include or exclude for no-cursor blocks 8,9 11,12
-            # if subject number is ODD, store exclude-include-include-exclude instruction sequence
-            # else, store include-exclude-include-exclude instruction sequence
+
+        if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
+            # print include or exclude for no-cursor tasks 8 & 9
+            # if subject number is ODD, store exclude-include instruction sequence
+            # else, store include-exclude instruction sequence
             taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
             taskdf$instruction[which(taskdf$task == 9)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 11)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 12)] <- 'exclude'
             
-          } else { #this is an even-numbered participant
+        } else { #this is an even-numbered participant
+          
             taskdf$instruction[which(taskdf$task == 8)] <- 'include'
             taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 11)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 12)] <- 'include'
-          }
-          
-        } else { ## THIS IS AN EXPLICIT EXPERIMENT
-          if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
-            # for block 8, print 'exclude'
-            taskdf$instruction[which(taskdf$task == 4)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 5)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 7)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 8)] <- 'exclude'
             
-          } else { #this is an even-numbered participant
-            taskdf$instruction[which(taskdf$task == 4)] <- 'include'
-            taskdf$instruction[which(taskdf$task == 5)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 7)] <- 'exclude'
-            taskdf$instruction[which(taskdf$task == 8)] <- 'include'
-          }
-          
         }
-        
+          
       }
       
       if (is.data.frame(ppdf)==TRUE) {

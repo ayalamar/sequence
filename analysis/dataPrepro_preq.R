@@ -1,17 +1,16 @@
-########## FOR PREQ DATA SPECIFICALLY ##########
+########## FOR PREQ DATA ONLY ##########
 setwd('/Users/mayala/Desktop/preq data')
-subject_numbers <- c(1:2) 
+subject_numbers <- c(1:18) 
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
-homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
+homey <- c(0) # if this is 0, no scaling will be done in taskAnalysis()
 
 # TASK COMBINE SEQUENCE . M
 # AFTER having been selected, this combines all tasks per participant into one huge
 # participant file that includes ALL samples for every trial and block
 
 taskCombine <- function() {
-  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
@@ -142,7 +141,6 @@ taskCombine <- function() {
 }
 }  
 
-
 # QUICK ANALYSIS SEQUENCE . M
 # After having been combined, this function subsets the variable(s) of interest and 
 # creates an output w/ a single sample per trial
@@ -188,12 +186,10 @@ taskPreprocess <- function() {
     
     write.csv(pvsamples, file = outfile_name, row.names = FALSE)  
   } 
-  
 }
 
 # outlierRemove . R 
 tagOutliers <- function() {
-  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
