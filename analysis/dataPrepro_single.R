@@ -86,6 +86,7 @@ taskCombine <- function() {
 
 # load the csv files you just made above ^
 taskPreprocess <- function() {
+  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
@@ -140,14 +141,13 @@ tagOutliers <- function() {
     
     ppdf <- read.csv(filename, header = TRUE)
     
-    ppdf$pv_angle_n <- abs(ppdf$pv_angle)
-    boxplot(pv_angle_n~rotation, ylab='angle at peak velocity', xlab='rotation',data = ppdf)
-    outlier_values <- boxplot.stats(ppdf$pv_angle_n)$out
+    boxplot(pv_angle~rotation, ylab='angle at peak velocity', xlab='rotation',data = ppdf)
+    outlier_values <- boxplot.stats(ppdf$pv_angle)$out
     
     ppdf$isoutlier <- FALSE
-    ppdf$isoutlier[which(ppdf$pv_angle_n %in% outlier_values)] <- TRUE
-    ppdf$pv_angle_n[which(ppdf$isoutlier == TRUE)] <- NA
-    ppdf$pv_angle_n[which(ppdf$selection_1 != 1)] <- NA
+    ppdf$isoutlier[which(ppdf$pv_angle %in% outlier_values)] <- TRUE
+    ppdf$pv_angle[which(ppdf$isoutlier == TRUE)] <- NA # NOTE : USING SIGNED ERRORS
+    ppdf$pv_angle[which(ppdf$selection_1 != 1)] <- NA
     
     outfile_name = sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     
