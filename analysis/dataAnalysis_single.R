@@ -1,5 +1,5 @@
 # for single CW and CCW
-setwd('/Users/mayala/Desktop/single CW data')
+setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # same for CW & CCW
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -107,11 +107,6 @@ getStatistics <- function(){
   tdfsmooth2 <- tdf %>% filter(task == 5)
   tdfsmooth2$trial <- tdfsmooth2$trial + 179
   tdfsmooth <- rbind(tdfsmooth,tdfsmooth2)
-  
-  P <- ggplot(tdfsmooth, aes(trial, pv_angle)) +
-    geom_point() +
-    #stat_smooth(method = "lm", formula = y ~ poly(x, 2), size = 1)
-    stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1) 
 
   traindf <- tdfsmooth %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
                                   SEM_pl = SD_pl/sqrt(length(unique(participant))),
@@ -124,7 +119,7 @@ getStatistics <- function(){
   Means <- ggplot(data=traindf, aes(x=trial, y=Mean_pv)) +
     geom_line() + 
     geom_ribbon(data=traindf, aes(ymin=Mean_pv-SEM_pv, ymax= Mean_pv+SEM_pv), alpha=0.4) +
-    geom_point(data=tdfsmooth, aes(x=trial, y= pv_angle), colour='chartreuse1',alpha = 0.2) +
+    geom_point(data=tdfsmooth, aes(x=trial, y= pv_angle), colour='chartreuse1',alpha = 0.1) +
     #stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, linetype="dashed", color="blue", aes(outfit=fit<<-..y..),n=359) +
     #geom_line(aes(x=trial, y=exp(decay$fitted.values)), color = "red")
     #stat_smooth(method = "nls", formula = y ~ a * exp(-S * x), 
