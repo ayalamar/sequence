@@ -113,28 +113,59 @@ getStatistics <- function(){
                                   Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
                                   SEM_pv = SD_pv/sqrt(length(unique(participant))))
 
-#   exp.model <-lm(pv_angle ~ exp(trial), tdfsmooth)
-#   decay <- lm(log(pv_angle) ~ trial, data=tdfsmooth) 
+# #   exp.model <-lm(pv_angle ~ exp(trial), tdfsmooth)
+# #   decay <- lm(log(pv_angle) ~ trial, data=tdfsmooth) 
+#   
+#   Means <- ggplot(data=traindf, aes(x=trial, y=Mean_pv)) +
+#     geom_line() + 
+#     geom_ribbon(data=traindf, aes(ymin=Mean_pv-SEM_pv, ymax= Mean_pv+SEM_pv), alpha=0.4) +
+#     geom_point(data=tdfsmooth, aes(x=trial, y= pv_angle), colour='chartreuse1',alpha = 0.1) +
+#     #stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, linetype="dashed", color="blue", aes(outfit=fit<<-..y..),n=359) +
+#     #geom_line(aes(x=trial, y=exp(decay$fitted.values)), color = "red")
+#     #stat_smooth(method = "nls", formula = y ~ a * exp(-S * x), 
+#                 # method.args = list(start = list(a = 78, S = 0.02)), se = FALSE, #starting values obtained from fit above
+#                 # color = "dark red", linetype ="dashed")+
+#     ylim(-50, 50) +
+#     ggtitle('Single CW training') +
+#     ylab("Angular error (Degrees)") +
+#     xlab("Trial") +
+#     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#             panel.background = element_blank(), axis.line = element_line(colour = "black")) 
+#   print(Means)
+#   move_layers(Means,"GeomRibbon", position = "top")
+#   move_layers(Means,"GeomLine", position = "top")
+#   move_layers(Means,"GeomPoint", position = "bottom")
   
-  Means <- ggplot(data=traindf, aes(x=trial, y=Mean_pv)) +
-    geom_line() + 
-    geom_ribbon(data=traindf, aes(ymin=Mean_pv-SEM_pv, ymax= Mean_pv+SEM_pv), alpha=0.4) +
-    geom_point(data=tdfsmooth, aes(x=trial, y= pv_angle), colour='chartreuse1',alpha = 0.1) +
-    #stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, linetype="dashed", color="blue", aes(outfit=fit<<-..y..),n=359) +
-    #geom_line(aes(x=trial, y=exp(decay$fitted.values)), color = "red")
-    #stat_smooth(method = "nls", formula = y ~ a * exp(-S * x), 
-                # method.args = list(start = list(a = 78, S = 0.02)), se = FALSE, #starting values obtained from fit above
-                # color = "dark red", linetype ="dashed")+
-    ylim(-50, 50) +
-    ggtitle('Single CW training') +
-    ylab("Angular error (Degrees)") +
-    xlab("Trial") +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            panel.background = element_blank(), axis.line = element_line(colour = "black")) 
-  print(Means)
-  move_layers(Means,"GeomRibbon", position = "top")
-  move_layers(Means,"GeomLine", position = "top")
-  move_layers(Means,"GeomPoint", position = "bottom")
+  ##plotting blocked training
+  for (rot in sort(unique(tdf$garage_location))){
+    
+    dfplot1 <- tdf %>% filter(garage_location==rot) %>% filter(task == 3)
+    dfplot2 <- tdf %>% filter(garage_location==rot) %>% filter(task == 5)
+    dfplot3 <- tdf %>% filter(garage_location==rot) %>% filter(task == 7)
+    dfplot2$trial <- dfplot2$trial + 179
+    dfplot3$trial <- dfplot3$trial + 179 + 179
+    dfplot <- rbind(dfplot1, dfplot2, dfplot3)
+    
+    traindf <- dfplot %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
+                                                                                  SEM_pl = SD_pl/sqrt(length(unique(participant))), Mean_pv = mean(pv_angle, na.rm=TRUE),                                                                                SD_pv = sd(pv_angle, na.rm=TRUE),SEM_pv = SD_pv/sqrt(length(unique(participant))))
+    bl1 <- traindf[1:3,] %>% mutate(block = 1)
+    bl2 <- traindf[4:6,] %>% mutate(block = 2)
+    bll <- traindf[(nrow(traindf)-2):nrow(traindf),] %>% mutate(block = 7)
+    combobl <- rbind(bl1, bl2, bll)
+    combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
+    
+    bltrain <- ggplot(data=combobl, aes(x=block, y=pv)) +
+      geom_point() +
+      geom_line(data=combobl, aes(x=block, y=pv)) +
+      geom_ribbon(data=combobl, aes(ymin=pv-sem, ymax= pv+sem), alpha=0.4) +
+      ylim(-50,50) +
+      xlim(1,7) +
+      coord_fixed(ratio = 1/7) +
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+      ggtitle('Consequence experiment - Blocked training')
+    print(bltrain)
+  }
   
   #smooth_vals <- predict(loess(pv_angle~trial,tdfsmooth), tdfsmooth$trial)
 

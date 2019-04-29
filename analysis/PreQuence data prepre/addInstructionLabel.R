@@ -1,4 +1,4 @@
-# also add (if subject < 18.5) later on
+
 if (participant < 18.5) { # subjects without instruction counterbalance printed in output
   
   if (participant < 9.5) {
