@@ -1,5 +1,5 @@
 # for single CW and CCW
-setwd('/Users/mayala/Desktop/single CCW data')
+setwd('/Users/mayala/Desktop/single CW data')
 
 subject_numbers <- c(1:10) # same for CW & CCW
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -163,12 +163,47 @@ getStatistics <- function(){
       coord_fixed(ratio = 1/7) +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
             panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-      ggtitle('Consequence experiment - Blocked training')
+      ggtitle('Single experiment - Blocked training')
     print(bltrain)
   }
   
   #smooth_vals <- predict(loess(pv_angle~trial,tdfsmooth), tdfsmooth$trial)
-
+  
+  #######################################################################
+  ###################EDIT FOR PERCENT IMPROVEMENT #######################
+  #######################################################################
+  
+  PI <- c()
+  for (ppno in sort(unique(dfplot$participant))) {
+    dfplot1 <- tdf  %>% filter(task == 3)
+    dfplot2 <- tdf  %>% filter(task == 5)
+    dfplot3 <- tdf  %>% filter(task == 7)
+    dfplot2$trial <- dfplot2$trial + 179
+    dfplot3$trial <- dfplot3$trial + 179 + 179
+    dfplot <- rbind(dfplot1, dfplot2, dfplot3)
+    
+    inblock <- dfplot %>% filter(participant == ppno) %>% filter(trial==0|trial==1|trial==2)
+    inblock <- abs(mean(inblock$pv_angle, na.rm=TRUE))
+    finblock <- dfplot %>% filter(participant == ppno) %>% filter(trial == 368|trial==369|trial==370) 
+    finblock <- abs(mean(finblock$pv_angle, na.rm=TRUE))
+    y <- ((inblock - finblock)/inblock)*100
+    
+    if (is.null(PI) == TRUE ) {
+      PI <- y
+    } else {
+      PI <- c(PI, y)
+    }
+  }
+  boxplot(PI) # one outlier for CCW
+  #PI <- PI[-c(6)] # for CCW
+  
+  
+  meanPI <- mean(PI, na.rm=TRUE)
+  semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
+  
+  
+  
+  ################################
   # ANALYZE REACH AFTEREFFECTS
   # get df of just reach AEs first. baseline = -1; excludeAE = 0; includeAE = 1
   # note: Errors are signed since groups are analyzed separately
@@ -185,12 +220,43 @@ getStatistics <- function(){
   t.test(excludeAE$pv - baselineAE$pv, mu=0, alternative ="greater") 
   t.test(includeAE$pv - baselineAE$pv, excludeAE$pv - baselineAE$pv, alternative ="greater") 
   
-  # VISUALIZE REACH AFTEREFFECTS (to see if in the expected directions)
+  ## VISUALIZE REACH AFTEREFFECTS (to see if in the expected directions)
   tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0)
   ggplot(tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(garage_location))) +
     geom_boxplot() +
     ylim(-50, 50) +
     theme_classic() +
     ggtitle("Single rotation group")
+  
+  ## more visualizations of AE
+  SEMs <- NA
+  for (garage in sort(unique(tdf$garage_location))) {
+    for (instruct in sort(unique(tdf$instruction))) {
+      x <- tdf %>% filter(garage_location == garage ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
+        group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+                                      SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+                                      instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
+      
+      if (is.data.frame(SEMs) == TRUE ) {
+        SEMs <- rbind(SEMs, x)
+      } else {
+        SEMs <- x
+      }
+    }
+  }
+  
+  ## bar plot I/E Reach aftereffects ##
+  
+  IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(garage_location))) +
+    geom_bar(stat="identity", position ="dodge") +
+    geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
+                  width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +
+    ylab("Angular error (Degrees)") +
+    ggtitle("Single CW") +
+    coord_fixed(ratio = 1/13) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+    scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
+  print(IEbars)
   
 }

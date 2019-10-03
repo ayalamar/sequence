@@ -1,6 +1,6 @@
 ########## FOR PREQ DATA ONLY ##########
 setwd('/Users/mayala/Desktop/preq data')
-subject_numbers <- c(1:18) 
+subject_numbers <- c(1:31) 
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
@@ -48,7 +48,7 @@ taskCombine <- function() {
         taskdf$pathlength[which(taskdf$trial == trialno)] <- trial_pathlength
         
         ## PARTICIPANTS BEFORE SUBJECT # 19 NEED TO HAVE CB PRINTED IN OUTPUT
-        if (unique(taskdf$participant) < 18.5) { 
+        if (unique(taskdf$participant) < 31.5) { 
           
           if (unique(taskdf$participant) < 9.5) {
             

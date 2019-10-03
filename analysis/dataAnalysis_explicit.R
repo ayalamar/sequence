@@ -94,16 +94,20 @@ getStatistics <- function(){
  #block1<- tdf %>% filter(task==2) %>% filter(trial %in% c(3,4,5)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
   blocklast<- tdf %>% filter(task==6) %>% filter(trial %in% c(21,22,23)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
   
-  adaptdf<- rbind(block1,blocklast)
+  # participant 4 - problem with task 6 (only trials 0-12 got copied)
+  blocklast4 <- tdf %>% filter(participant==4) %>% filter(task==6) %>% filter(trial %in% c(10,11,12)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+  
+  adaptdf<- rbind(block1,blocklast, blocklast4)
+  blocklast <- rbind(blocklast, blocklast4)
   
   adaptdf$block <- factor(adaptdf$block)
   adaptdf$participant <- factor(adaptdf$participant)
   
-  RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pv)
-  RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pl)
-  t.test(block1$pv, blocklast$pv, alternative ="greater" )
+  # RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
+  # summary(RM_pv)
+  # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
+  # summary(RM_pl)
+  t.test(block1$pv, blocklast$pv, alternative ="greater", paired=TRUE )
   
   # VISUALIZE LEARNING
     
@@ -169,6 +173,39 @@ getStatistics <- function(){
       print(bltrain)
     }
 
+    #######################################################################
+    ###################EDIT FOR PERCENT IMPROVEMENT #######################
+    #######################################################################
+    
+    PI <- c()
+    for (ppno in sort(unique(dfplot$participant))) {
+      dfplot1 <- tdf  %>% filter(task == 2)
+      dfplot2 <- tdf  %>% filter(task == 3)
+      dfplot3 <- tdf  %>% filter(task == 6)
+      dfplot2$trial <- dfplot2$trial + 359
+      dfplot3$trial <- dfplot3$trial + 359 + 359
+      dfplot <- rbind(dfplot1, dfplot2, dfplot3)
+      
+      inblock <- dfplot %>% filter(participant == ppno) %>% filter(trial==0|trial==1|trial==2)
+      inblock <- mean(inblock$pv_angle_n, na.rm=TRUE)
+      finblock <- dfplot %>% filter(participant == ppno) %>% filter(trial == 740|trial==741|trial==742) 
+      finblock <- mean(finblock$pv_angle_n, na.rm=TRUE)
+      y <- ((inblock - finblock)/inblock)*100
+      
+      if (is.null(PI) == TRUE ) {
+        PI <- y
+      } else {
+        PI <- c(PI, y)
+      }
+    }
+    boxplot(PI) # note - looks good , no outliers
+    
+    meanPI <- mean(PI, na.rm=TRUE)
+    semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
+    barplot(meanPI, main="Percent Improvement", 
+            xlab="explicit exp", ylim=c(-100, 100))
+    #errbar(1, meanPI, meanPI + semPI, meanPI - semPI, ylim=c(-100, 100))
+    
   #######################################################################
   ###############EDIT FOR REACH AFTEREFFECTS ANALYSIS####################
   #######################################################################
@@ -183,9 +220,9 @@ getStatistics <- function(){
   AEdf$participant <- factor(AEdf$participant)
   AEdf <- sequence_AEdf %>% mutate(group_instruction=1) # add group label for later 
   
-  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater" )
-  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater" )
-  t.test(includeAE$pv-baselineAE$pv, excludeAE$pv-baselineAE$pv, alternative ="greater" )
+  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired=TRUE )
+  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater", paired=TRUE )
+  t.test(includeAE$pv-baselineAE$pv, excludeAE$pv-baselineAE$pv, alternative ="greater",paired=TRUE )
 
   ## REACH AE Visualizations
   ##  get SEMs for errorbar ##
@@ -210,9 +247,12 @@ getStatistics <- function(){
     geom_bar(stat="identity", position ="dodge") +
     geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
                   width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +
-    ylim(-50, 50) +
     ylab("Angular error (Degrees)") +
-    ggtitle("Instruction (explicit) Dual Group")
+    ggtitle("Single CW")+
+    coord_fixed(ratio = 1/13) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+    scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
   print(IEbars)
   
 }

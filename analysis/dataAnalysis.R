@@ -1,11 +1,11 @@
 ######### MAKE CHANGES HERE ############
 ########################################
 # note to self this is the master script (04 05 2019)
-setwd('/Users/mayala/Desktop/conseq data')
+setwd('/Users/mayala/Desktop/static data')
 
-subject_numbers <- c(1:7, 9:31) # consequence experiment
+#subject_numbers <- c(1:7, 9:31) # consequence experiment
 #subject_numbers <- c(3:9, 11:17, 20:33) # sequence experiment
-#subject_numbers <- c(1:12) #static experiment
+subject_numbers <- c(1:12) #static experiment
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
@@ -76,6 +76,7 @@ getStatistics <- function(){
   library(dplyr)
   library(ggplot2)
   library(gginnards)
+  library(Hmisc)
   
   filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
@@ -105,11 +106,11 @@ getStatistics <- function(){
   adaptdf$block <- factor(adaptdf$block)
   adaptdf$participant <- factor(adaptdf$participant)
   
-  RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pv)
-  RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pl)
-  t.test(block1$pv, blocklast$pv, alternative ="greater" )
+  # RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
+  # summary(RM_pv)
+  # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
+  # summary(RM_pl)
+   t.test(block1$pv, blocklast$pv, alternative ="greater", paired=TRUE )
   
   # mod1 <- ezANOVA(data = adaptdf,
   #                 dv = pv,
@@ -170,6 +171,7 @@ getStatistics <- function(){
     combobl <- rbind(bl1, bl2, bll)
     combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
     
+    # block training plots
     bltrain <- ggplot(data=combobl, aes(x=block, y=pv)) +
       geom_point() +
       geom_line(data=combobl, aes(x=block, y=pv)) +
@@ -182,6 +184,40 @@ getStatistics <- function(){
       ggtitle('Consequence experiment - Blocked training')
     print(bltrain)
   }
+  
+  #######################################################################
+  ###################EDIT FOR PERCENT IMPROVEMENT #######################
+  #######################################################################
+  
+  PI <- c()
+  for (ppno in sort(unique(dfplot$participant))) {
+    dfplot1 <- tdf  %>% filter(task == 3)
+    dfplot2 <- tdf  %>% filter(task == 5)
+    dfplot3 <- tdf  %>% filter(task == 7)
+    dfplot2$trial <- dfplot2$trial + 359
+    dfplot3$trial <- dfplot3$trial + 359 + 359
+    dfplot <- rbind(dfplot1, dfplot2, dfplot3)
+    
+    inblock <- dfplot %>% filter(participant == ppno) %>% filter(trial==0|trial==1|trial==2)
+    inblock <- mean(inblock$pv_angle_n, na.rm=TRUE)
+    finblock <- dfplot %>% filter(participant == ppno) %>% filter(trial == 740|trial==741|trial==742) 
+    finblock <- mean(finblock$pv_angle_n, na.rm=TRUE)
+    y <- ((inblock - finblock)/inblock)*100
+    
+    if (is.null(PI) == TRUE ) {
+      PI <- y
+    } else {
+      PI <- c(PI, y)
+    }
+  }
+  boxplot(PI) # note - looks good , no outliers
+
+  meanPI <- mean(PI, na.rm=TRUE)
+  semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
+  barplot(meanPI, main="Percent Improvement", 
+          xlab="sequence exp", ylim=c(-100, 100))
+  errbar(  1, meanPI, meanPI + semPI, meanPI - semPI, ylim=c(-100, 100))
+  t.test(PI, alternative = "greater")
   #######################################################################
   ###############EDIT FOR REACH AFTEREFFECTS ANALYSIS####################
   #######################################################################
@@ -196,9 +232,19 @@ getStatistics <- function(){
   sequence_AEdf$participant <- factor(sequence_AEdf$participant)
   sequence_AEdf <- sequence_AEdf %>% mutate(group_instruction=1) # add group label for later 
   
-  t.test(sequence_excludeAE$pv, sequence_baselineAE$pv, alternative ="greater" )
-  t.test(sequence_excludeAE$pv-sequence_baselineAE$pv, mu=0, alternative ="greater" )
-  t.test(sequence_includeAE$pv-sequence_baselineAE$pv, sequence_excludeAE$pv-sequence_baselineAE$pv, alternative ="greater" )
+  t.test(sequence_excludeAE$pv, sequence_baselineAE$pv, alternative ="greater", paired = TRUE )
+  t.test(sequence_excludeAE$pv-sequence_baselineAE$pv, mu=0, alternative ="greater", paired = TRUE )
+  t.test(sequence_includeAE$pv-sequence_baselineAE$pv, sequence_excludeAE$pv-sequence_baselineAE$pv, alternative ="greater", paired = TRUE )
+  
+  #######################################################################
+  ###############WITHIN-TRAINING AE VS. EXCLUDE-STRATEGY AE####################
+  #######################################################################
+  sequence_withinAE <- tdf %>% filter(task==6) %>%
+    filter(trial %in% c(0)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 6)
+  
+  t.test(sequence_withinAE$pv-sequence_baselineAE$pv, sequence_excludeAE$pv-sequence_baselineAE$pv , paired = TRUE)
   
   ##### CROSS EXPERIMENT COMPARISONS ##############################################################
   #################################################################################################
@@ -268,16 +314,25 @@ SEMs <- NA
    }
   ## bar plot I/E Reach aftereffects ##
 IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(garage_location))) +
-          geom_bar(stat="identity", position ="dodge") +
-          geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
-                        width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +
-          ylim(-50, 50) +
-          ylab("Angular error (Degrees)") +
-          ggtitle("No instruction (Seq) Dual Group")
+  geom_bar(stat="identity", position ="dodge") +
+  geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
+                width=0.1, size=0.5, color="grey", position = position_dodge(width = 0.9)) +
+  ylab("Angular error (Degrees)") +
+  ggtitle("Dual Seq")+
+  coord_fixed(ratio = 1/13) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
 print(IEbars)
 
+# 
+# ## get baseline NCs
+# NCbaselinecw <- tdf %>% filter(garage_location == 1 )%>% filter(task==1) %>% filter(trial == 23) %>% group_by(participant) %>%
+#   group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+#                                 SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+#                                 instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
+# NCbaselineccw <- tdf %>% filter(garage_location == -1 )%>% filter(task==1) %>% filter(trial == 23) %>% group_by(participant) %>%
+#   group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+#                                 SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+#                                 instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
 }
-
-
-
-

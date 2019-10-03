@@ -2,7 +2,7 @@
 #### convert .csv experiment output to .txt 
 #### remove the headers 
 library(dplyr)
-subject_numbers <- c(1:18) # edit participant #s
+subject_numbers <- c(30:31) # edit participant #s
 #
 
 
@@ -16,7 +16,7 @@ subject_numbers <- c(1:18) # edit participant #s
 ###
 
 # output txt file with no header
-for (subject in 1:length(subject_numbers)) {
+for (subject in sort(unique(subject_numbers))) {
 
   for (task in 0:12){
     
@@ -31,6 +31,11 @@ for (subject in 1:length(subject_numbers)) {
     
     ## SELECT ONLY STEPS 1 & 2 & 6 (outward movement)
     data <-  data %>% filter(step == c(1,2,6))
+    
+    ## GET RID OF INSTRUCTION LABEL -- PARTICIPANT # 19 AND ON
+    if (data$participant > 18.5) {
+      data <- data[,-c(5)]
+    }
     
    ## only do for rotated trials & subjects run in the old version of the experiment that was
    ## missing the cursorxy stamps
