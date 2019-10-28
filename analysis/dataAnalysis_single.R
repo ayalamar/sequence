@@ -1,5 +1,6 @@
 # for single CW and CCW
 setwd('/Users/mayala/Desktop/single CW data')
+#setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # same for CW & CCW
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -67,6 +68,7 @@ plotData <- function(){
 ##### function for statistical analysis
 getStatistics <- function(){
   library(dplyr)
+  library(tidyr)
   library(ggplot2)
   library(gginnards)
   
@@ -96,10 +98,10 @@ getStatistics <- function(){
   adaptdf$block <- factor(adaptdf$block)
   adaptdf$participant <- factor(adaptdf$participant)
   
-  RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pv)
-  RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
-  summary(RM_pl)
+   RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
+   summary(RM_pv)
+  # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
+  # summary(RM_pl)
   
   # VISUALIZE LEARNING
 
@@ -207,9 +209,29 @@ getStatistics <- function(){
   # ANALYZE REACH AFTEREFFECTS
   # get df of just reach AEs first. baseline = -1; excludeAE = 0; includeAE = 1
   # note: Errors are signed since groups are analyzed separately
-  baselineAE <- tdf %>% filter(task==1) %>% filter(trial %in% c(10,11,12)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), block = -1)
-  excludeAE <- tdf %>% filter(instruction=='exclude') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), block = 0)
-  includeAE <- tdf %>% filter(instruction=='include') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), block = 1)
+  baselineAE <- tdf %>%
+    filter(task==1) %>%
+    filter(trial %in% c(10,11,12)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), block = -1)
+  
+  excludeAE <- tdf %>%
+    filter(instruction=='exclude') %>%
+    drop_na(pv_angle) %>% 
+    group_by(participant) %>% 
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), block = 0)
+  
+  includeAE <- tdf %>%
+    filter(instruction=='include') %>%
+    drop_na(pv_angle) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), block = 1)
+  
+  #subtract baseline
+  excludeAE$pv <- excludeAE$pv - baselineAE$pv
+  includeAE$pv <- includeAE$pv - baselineAE$pv
   
   AEdf <- rbind(baselineAE, excludeAE, includeAE)
   AEdf$block <- factor(AEdf$block)

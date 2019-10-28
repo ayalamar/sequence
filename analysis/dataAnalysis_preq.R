@@ -1,5 +1,5 @@
 ########## FOR PREQ DATA ONLY ##########
-### NOTE : rotation are opposite as of other seq exps 
+### NOTE : wrong label - rotation are labelled opposite as of other seq exps 
 setwd('/Users/mayala/Desktop/preq data')
 subject_numbers <- c(1:31) 
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
@@ -198,23 +198,72 @@ getStatistics <- function(){
   AEdf <-AEdf %>% mutate(group_instruction=1) # add group label for later 
   
   t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired = TRUE )
-  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater", paired = TRUE )
+  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater" )
   t.test(includeAE$pv-baselineAE$pv, excludeAE$pv-baselineAE$pv, alternative ="greater" , paired = TRUE)
   
   ## visualize reach AEs
-  tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0)
+  tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0) 
   ggplot(tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(prehome))) +
     geom_boxplot() +
+    geom_point()+
     ylim(-50, 50) +
     theme_classic() +
-    ggtitle("PreQ Dual Group")
+    ggtitle("PreQ Dual Group")  # note : participant 6 has one outlier and the remaining also an outlier in boxplots
+  
+  ## use these for stats - double-checking that reach AEs are in the correct direction 
+  
+  tdf_NCs_baseline.summary1 <- tdf %>%
+    filter(prehome=="1") %>%
+    filter(task=="1") %>%
+    filter(trial %in% c(21,22,23)) %>%
+    group_by(participant) %>%
+    summarise(meanaebase = mean(pv_angle, na.rm=T))
+  
+  tdf_NCs_baseline.summary2 <- tdf %>%
+    filter(prehome=="-1") %>%
+    filter(task=="1") %>%
+    filter(trial %in% c(21,22,23)) %>%
+    group_by(participant) %>%
+    summarise(meanaebase = mean(pv_angle, na.rm=T))
+  
+  tdf_NCs_rot.summary1 <- tdf_NCs_rot %>%   #note these are only first trial
+    filter(prehome=="1") %>%
+    filter(instruction == "include") %>%
+    group_by(participant) %>%
+    summarise(meanae = mean(pv_angle, na.rm=T))
+  
+  tdf_NCs_rot.summary2 <- tdf_NCs_rot %>%
+    filter(prehome=="1") %>%
+    filter(instruction == "exclude") %>%
+    group_by(participant) %>%
+    summarise(meanae = mean(pv_angle, na.rm=T))
+  
+  tdf_NCs_rot.summary3 <- tdf_NCs_rot %>%
+    filter(prehome=="-1") %>%
+    filter(instruction == "include") %>%
+    group_by(participant) %>%
+    summarise(meanae = mean(pv_angle, na.rm=T))
+  
+  tdf_NCs_rot.summary4 <- tdf_NCs_rot %>%
+    filter(participant != 14) %>%
+    filter(prehome=="-1") %>%
+    filter(instruction == "exclude") %>%
+    group_by(participant) %>%
+    summarise(meanae = mean(pv_angle, na.rm=T))
+  # double check that AEs are indeed not significant from baseline 
+  # yy <- left_join(tdf_NCs_rot.summary4,tdf_NCs_baseline.summary2 )
+  # t.test(yy$meanae,yy$meanaebase,paired = TRUE,alternative = "greater")
   
   ## more visualizations of AE
   SEMs <- NA
   for (ph in sort(unique(tdf$prehome))) {
     for (instruct in sort(unique(tdf$instruction))) {
-      x <- tdf %>% filter(prehome == ph ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
-        group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+      x <- tdf %>% filter(prehome == ph ) %>%
+        filter(instruction == instruct) %>%
+        filter(trial == 0) %>%
+        group_by(participant) %>% 
+        group_by(trial) %>%
+        summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
                                       SEM_pv = SD_pv/sqrt(length(unique(participant))), 
                                       instruction = instruct, prehome = ph, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
       
@@ -224,7 +273,7 @@ getStatistics <- function(){
         SEMs <- x
       }
     }
-  }
+  }   # note that due to the counterbalance mistake for participants 1-9, group by participants (so they only get one score in the mean)
   ## bar plot I/E Reach aftereffects ##
   IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(prehome))) +
     geom_bar(stat="identity", position ="dodge") +

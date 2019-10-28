@@ -1,11 +1,11 @@
 ######### MAKE CHANGES HERE ############
 ########################################
 # note to self this is the master script (04 05 2019)
-setwd('/Users/mayala/Desktop/static data')
+setwd('/Users/mayala/Desktop/seq data')
 
 #subject_numbers <- c(1:7, 9:31) # consequence experiment
-#subject_numbers <- c(3:9, 11:17, 20:33) # sequence experiment
-subject_numbers <- c(1:12) #static experiment
+subject_numbers <- c(3:9, 11:17, 20:33) # sequence experiment
+#subject_numbers <- c(1:12) #static experiment
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
@@ -233,7 +233,7 @@ getStatistics <- function(){
   sequence_AEdf <- sequence_AEdf %>% mutate(group_instruction=1) # add group label for later 
   
   t.test(sequence_excludeAE$pv, sequence_baselineAE$pv, alternative ="greater", paired = TRUE )
-  t.test(sequence_excludeAE$pv-sequence_baselineAE$pv, mu=0, alternative ="greater", paired = TRUE )
+  t.test(sequence_excludeAE$pv-sequence_baselineAE$pv, mu=0, alternative ="greater" )
   t.test(sequence_includeAE$pv-sequence_baselineAE$pv, sequence_excludeAE$pv-sequence_baselineAE$pv, alternative ="greater", paired = TRUE )
   
   #######################################################################

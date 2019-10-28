@@ -1,5 +1,5 @@
 # for single CW and CCW
-setwd('/Users/mayala/Desktop/single CW data')
+setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # same for CW & CCW
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -146,7 +146,7 @@ tagOutliers <- function() {
     
     ppdf$isoutlier <- FALSE
     ppdf$isoutlier[which(ppdf$pv_angle %in% outlier_values)] <- TRUE
-    ppdf$pv_angle[which(ppdf$isoutlier == TRUE)] <- NA # NOTE : USING SIGNED ERRORS
+    #ppdf$pv_angle[which(ppdf$isoutlier == TRUE)] <- NA # NOTE : USING SIGNED ERRORS
     ppdf$pv_angle[which(ppdf$selection_1 != 1)] <- NA
     
     outfile_name = sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
