@@ -1,14 +1,14 @@
-# for single CW and CCW
+##### FOR SINGLE CW AND CCW CONTROL GROUPS
 setwd('/Users/mayala/Desktop/single CW data')
 #setwd('/Users/mayala/Desktop/single CCW data')
 
-subject_numbers <- c(1:10) # same for CW & CCW
+subject_numbers <- c(1:10) # SAME FOR SINGLE CW & CCW GROUPS
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
-homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
+homey <- c(7.3438) # IF THIS IS 0, NO SCALING WILL BE DONE IN TASKANALYSIS()
 
-##### function for plotting data
+##### FUNCTION FOR PLOTTING RAW DATA ONLY
 plotData <- function(){
   
   library(dplyr)
@@ -65,8 +65,9 @@ plotData <- function(){
   }
 }
 
-##### function for statistical analysis
+##### FUNCTION FOR GETTING STATS AND CLEAN PLOTS
 getStatistics <- function(){
+  
   library(dplyr)
   library(tidyr)
   library(ggplot2)
@@ -85,21 +86,40 @@ getStatistics <- function(){
     }
   }
   
-  tdf <- tbl_df(df) # convert to tibble for dplyr
+  tdf <- tbl_df(df) 
+  
+  ################################
+  ################################
+  ################################
   
   # ANALYZE LEARNING
   # note: Errors are signed since groups are analyzed separately
-  baselinelast <- tdf %>% filter(task==0) %>% filter(trial %in% c(57,58,59)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
-  block1<- tdf %>% filter(task==3) %>% filter(trial %in% c(0,1,2)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
-  blocklast<- tdf %>% filter(task==7) %>% filter(trial %in% c(10,11,12)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
   
-  adaptdf<- rbind(block1,blocklast)
+  baselinelast <- tdf %>%
+    filter(task==0) %>%
+    filter(trial %in% c(57,58,59)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+  
+  block1 <- tdf %>%
+    filter(task==3) %>%
+    filter(trial %in% c(0,1,2)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+  
+  blocklast <- tdf %>%
+    filter(task==7) %>%
+    filter(trial %in% c(10,11,12)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+  
+  adaptdf <- rbind(block1, blocklast)
   
   adaptdf$block <- factor(adaptdf$block)
   adaptdf$participant <- factor(adaptdf$participant)
   
-   RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
-   summary(RM_pv)
+  RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
+  summary(RM_pv)
   # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
   # summary(RM_pl)
   
@@ -110,14 +130,16 @@ getStatistics <- function(){
   tdfsmooth2$trial <- tdfsmooth2$trial + 179
   tdfsmooth <- rbind(tdfsmooth,tdfsmooth2)
 
-  traindf <- tdfsmooth %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
-                                  SEM_pl = SD_pl/sqrt(length(unique(participant))),
-                                  Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
-                                  SEM_pv = SD_pv/sqrt(length(unique(participant))))
+  traindf <- tdfsmooth %>%
+    group_by(participant) %>%
+    group_by(trial) %>%
+    summarise(Mean_pl = mean(pathlength, na.rm=TRUE),
+              SD_pl = sd(pathlength, na.rm=TRUE),
+              SEM_pl = SD_pl/sqrt(length(unique(participant))),
+              Mean_pv = mean(pv_angle, na.rm=TRUE),
+              SD_pv = sd(pv_angle, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))))
 
-# #   exp.model <-lm(pv_angle ~ exp(trial), tdfsmooth)
-# #   decay <- lm(log(pv_angle) ~ trial, data=tdfsmooth) 
-#   
 #   Means <- ggplot(data=traindf, aes(x=trial, y=Mean_pv)) +
 #     geom_line() + 
 #     geom_ribbon(data=traindf, aes(ymin=Mean_pv-SEM_pv, ymax= Mean_pv+SEM_pv), alpha=0.4) +
@@ -169,14 +191,15 @@ getStatistics <- function(){
     print(bltrain)
   }
   
-  #smooth_vals <- predict(loess(pv_angle~trial,tdfsmooth), tdfsmooth$trial)
+  ################################
+  ################################
+  ################################
   
-  #######################################################################
-  ###################EDIT FOR PERCENT IMPROVEMENT #######################
-  #######################################################################
+  # ANALYZE PERCENT IMPROVEMENT
   
   PI <- c()
   for (ppno in sort(unique(dfplot$participant))) {
+    
     dfplot1 <- tdf  %>% filter(task == 3)
     dfplot2 <- tdf  %>% filter(task == 5)
     dfplot3 <- tdf  %>% filter(task == 7)
@@ -184,10 +207,18 @@ getStatistics <- function(){
     dfplot3$trial <- dfplot3$trial + 179 + 179
     dfplot <- rbind(dfplot1, dfplot2, dfplot3)
     
-    inblock <- dfplot %>% filter(participant == ppno) %>% filter(trial==0|trial==1|trial==2)
+    inblock <- dfplot %>%
+      filter(participant == ppno) %>%
+      filter(trial==0|trial==1|trial==2)
+    
     inblock <- abs(mean(inblock$pv_angle, na.rm=TRUE))
-    finblock <- dfplot %>% filter(participant == ppno) %>% filter(trial == 368|trial==369|trial==370) 
+    
+    finblock <- dfplot %>%
+      filter(participant == ppno) %>%
+      filter(trial == 368|trial==369|trial==370) 
+    
     finblock <- abs(mean(finblock$pv_angle, na.rm=TRUE))
+    
     y <- ((inblock - finblock)/inblock)*100
     
     if (is.null(PI) == TRUE ) {
@@ -196,89 +227,105 @@ getStatistics <- function(){
       PI <- c(PI, y)
     }
   }
-  boxplot(PI) # one outlier for CCW
-  #PI <- PI[-c(6)] # for CCW
   
+  boxplot(PI) # NOTE: one outlier for CCW
+  #PI <- PI[-c(6)] # for CCW
   
   meanPI <- mean(PI, na.rm=TRUE)
   semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
   
-  
-  
   ################################
+  ################################
+  ################################
+  
   # ANALYZE REACH AFTEREFFECTS
-  # get df of just reach AEs first. baseline = -1; excludeAE = 0; includeAE = 1
+  # baseline = -1; excludeAE = 0; includeAE = 1
   # note: Errors are signed since groups are analyzed separately
+  
   baselineAE <- tdf %>%
     filter(task==1) %>%
     filter(trial %in% c(10,11,12)) %>%
     group_by(participant) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), block = -1)
+    summarise(pv = mean(pv_angle, na.rm=TRUE), 
+              garage_location = unique(garage_location),
+              instruction = 'baseline')
   
   excludeAE <- tdf %>%
     filter(instruction=='exclude') %>%
     drop_na(pv_angle) %>% 
     group_by(participant) %>% 
     filter(trial == min(trial)) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), block = 0)
+    summarise(pv = mean(pv_angle, na.rm=TRUE),
+              garage_location = unique(garage_location),
+              instruction = 'exclude')
   
   includeAE <- tdf %>%
     filter(instruction=='include') %>%
     drop_na(pv_angle) %>% 
     group_by(participant) %>%
     filter(trial == min(trial)) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), block = 1)
+    summarise(pv = mean(pv_angle, na.rm=TRUE),
+              garage_location = unique(garage_location),
+              instruction = 'include')
   
   #subtract baseline
   excludeAE$pv <- excludeAE$pv - baselineAE$pv
   includeAE$pv <- includeAE$pv - baselineAE$pv
   
-  AEdf <- rbind(baselineAE, excludeAE, includeAE)
-  AEdf$block <- factor(AEdf$block)
-  AEdf$participant <- factor(AEdf$participant)
-  AEdf <- AEdf %>% mutate(group_instruction=1) # add group label for later 
+  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired=TRUE) # is there implicit learning?
+  t.test(excludeAE$pv - baselineAE$pv, mu=0, alternative ="greater") # same as above
+  t.test(includeAE$pv - baselineAE$pv, excludeAE$pv - baselineAE$pv, alternative ="greater", paired=TRUE) # is there explicit learning?
   
-  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater") # is there implicit learning?
-  t.test(excludeAE$pv - baselineAE$pv, mu=0, alternative ="greater") 
-  t.test(includeAE$pv - baselineAE$pv, excludeAE$pv - baselineAE$pv, alternative ="greater") 
+  ## VISUALIZE RAW I/E NO-CURSORS
+  tdf_NCs_rot <- tdf %>%
+    filter(instruction == 'exclude' | instruction == 'include') %>%
+    filter(trial == 0)
   
-  ## VISUALIZE REACH AFTEREFFECTS (to see if in the expected directions)
-  tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0)
   ggplot(tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(garage_location))) +
     geom_boxplot() +
     ylim(-50, 50) +
     theme_classic() +
     ggtitle("Single rotation group")
+  #boxplot(includeAE$pv) #CW - A COUPLE OF OUTLIERS
   
-  ## more visualizations of AE
-  SEMs <- NA
-  for (garage in sort(unique(tdf$garage_location))) {
-    for (instruct in sort(unique(tdf$instruction))) {
-      x <- tdf %>% filter(garage_location == garage ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
-        group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
-                                      SEM_pv = SD_pv/sqrt(length(unique(participant))), 
-                                      instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
-      
-      if (is.data.frame(SEMs) == TRUE ) {
-        SEMs <- rbind(SEMs, x)
-      } else {
-        SEMs <- x
-      }
-    }
-  }
+  ## COLLECT BASELINE-SUBTRACTED REACH AEs
+  includeAE.summary <- includeAE %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "include",
+              garage_location = "1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
   
+  excludeAE.summary <- excludeAE %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "exclude",
+              garage_location = "1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
+  
+  SEMs2 <- rbind(includeAE.summary,excludeAE.summary)
+
   ## bar plot I/E Reach aftereffects ##
-  
-  IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(garage_location))) +
-    geom_bar(stat="identity", position ="dodge") +
-    geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
-                  width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +
-    ylab("Angular error (Degrees)") +
-    ggtitle("Single CW") +
-    coord_fixed(ratio = 1/13) +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-    scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
+  IEbars<- ggplot(data=SEMs2, aes(x=instruction, y=Mean_pv,
+                                  fill=as.factor(garage_location))) +
+            geom_bar(stat="identity", position ="dodge") +
+            geom_errorbar(data=SEMs2, mapping=aes(x=instruction, y=Mean_pv,
+                                                  ymin=SEMs2$lowerSEM, ymax=SEMs2$upperSEM),
+                                                  width=0.1, size=1, color="grey",
+                                                  position = position_dodge(width = 0.9)) +
+            geom_point(data=includeAE, aes(x=instruction, y=pv), alpha = 1/7) +
+            geom_point(data=excludeAE, aes(x=instruction, y=pv), alpha = 1/7) +
+            ylab("Angular error (Degrees)") +
+            ggtitle("Single CW") +
+            coord_fixed(ratio = 1/13) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  panel.background = element_blank(), axis.line = element_line(colour = "black"),
+                  legend.title = element_blank(), legend.position = "none") +
+            scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
   print(IEbars)
   
 }
