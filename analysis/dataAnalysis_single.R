@@ -1,6 +1,6 @@
 ##### FOR SINGLE CW AND CCW CONTROL GROUPS
-setwd('/Users/mayala/Desktop/single CW data')
-#setwd('/Users/mayala/Desktop/single CCW data')
+#setwd('/Users/mayala/Desktop/single CW data')
+setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # SAME FOR SINGLE CW & CCW GROUPS
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -228,11 +228,41 @@ getStatistics <- function(){
     }
   }
   
-  boxplot(PI) # NOTE: one outlier for CCW
-  #PI <- PI[-c(6)] # for CCW
+  boxplot(PI) # CHECK FOR ANY OUTLIERS
   
-  meanPI <- mean(PI, na.rm=TRUE)
-  semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
+  meanPI <- mean(PI, na.rm = TRUE)
+  semPI <- sd(PI, na.rm = TRUE)/sqrt(length(PI))
+  #barplot(meanPI, main = "Percent Improvement", 
+  #        xlab = "sequence exp", ylim = c(-100, 100))
+  #errbar(1, meanPI, meanPI + semPI, meanPI - semPI, ylim = c(-100, 100))
+  
+  t.test(PI, alternative = "greater") # IMPROVEMENT ACROSS TRAINING
+  
+  PI <- tbl_df(PI) # ADD LABELS TO PLOT
+  PI <- PI %>% mutate(participant = 1:n(),
+                      group = "sequence",
+                      lowerSEM = meanPI - semPI,
+                      upperSEM = meanPI + semPI)
+  
+  PIplot <- ggplot(data = PI, aes(x = group, y = value)) +
+    stat_summary(fun.y = mean, geom = "bar", na.rm = TRUE) +
+    geom_errorbar(data = PI, mapping = aes(x = group, y = value, 
+                                           ymin = PI$lowerSEM, ymax = PI$upperSEM),
+                  width = 0.1, size = 0.5, color = "grey",
+                  position = position_dodge(width = 0.9)) +
+    geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
+    ylab("Percentage Improvement") +
+    ggtitle("Single CW Sequence") +
+    coord_fixed(ratio = 1/13) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+          legend.title = element_blank(), legend.position = "none") +
+    scale_y_continuous(breaks = seq(-100, +100, 50), limits = c(-100,100))
+  
+  move_layers(PIplot,"GeomPoint", position = "bottom")
+  
+  print(PIplot)
+  
   
   ################################
   ################################
@@ -243,28 +273,28 @@ getStatistics <- function(){
   # note: Errors are signed since groups are analyzed separately
   
   baselineAE <- tdf %>%
-    filter(task==1) %>%
+    filter(task == 1) %>%
     filter(trial %in% c(10,11,12)) %>%
     group_by(participant) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), 
+    summarise(pv = mean(pv_angle, na.rm = TRUE), 
               garage_location = unique(garage_location),
               instruction = 'baseline')
   
   excludeAE <- tdf %>%
-    filter(instruction=='exclude') %>%
+    filter(instruction == 'exclude') %>%
     drop_na(pv_angle) %>% 
     group_by(participant) %>% 
     filter(trial == min(trial)) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE),
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
               garage_location = unique(garage_location),
               instruction = 'exclude')
   
   includeAE <- tdf %>%
-    filter(instruction=='include') %>%
+    filter(instruction == 'include') %>%
     drop_na(pv_angle) %>% 
     group_by(participant) %>%
     filter(trial == min(trial)) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE),
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
               garage_location = unique(garage_location),
               instruction = 'include')
   
@@ -272,9 +302,8 @@ getStatistics <- function(){
   excludeAE$pv <- excludeAE$pv - baselineAE$pv
   includeAE$pv <- includeAE$pv - baselineAE$pv
   
-  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired=TRUE) # is there implicit learning?
-  t.test(excludeAE$pv - baselineAE$pv, mu=0, alternative ="greater") # same as above
-  t.test(includeAE$pv - baselineAE$pv, excludeAE$pv - baselineAE$pv, alternative ="greater", paired=TRUE) # is there explicit learning?
+  t.test(excludeAE$pv, mu=0, alternative ="greater") # is there implicit learning?
+  t.test(includeAE$pv, excludeAE$pv, alternative ="greater", paired = TRUE) # is there explicit learning?
   
   ## VISUALIZE RAW I/E NO-CURSORS
   tdf_NCs_rot <- tdf %>%
@@ -304,28 +333,32 @@ getStatistics <- function(){
               SEM_pv = SD_pv/sqrt(length(unique(participant))),
               instruction = "exclude",
               garage_location = "1",
-              lowerSEM = Mean_pv-SEM_pv,
+              lowerSEM = Mean_pv - SEM_pv,
               upperSEM = Mean_pv + SEM_pv)
   
-  SEMs2 <- rbind(includeAE.summary,excludeAE.summary)
+  SEMs2 <- rbind(includeAE.summary, excludeAE.summary)
 
   ## bar plot I/E Reach aftereffects ##
-  IEbars<- ggplot(data=SEMs2, aes(x=instruction, y=Mean_pv,
-                                  fill=as.factor(garage_location))) +
-            geom_bar(stat="identity", position ="dodge") +
-            geom_errorbar(data=SEMs2, mapping=aes(x=instruction, y=Mean_pv,
-                                                  ymin=SEMs2$lowerSEM, ymax=SEMs2$upperSEM),
-                                                  width=0.1, size=1, color="grey",
+  IEbars<- ggplot(data = SEMs2, aes(x = instruction, y = Mean_pv,
+                                  fill = as.factor(garage_location))) +
+            geom_bar(stat = "identity", position = "dodge") +
+            geom_errorbar(data = SEMs2, mapping = aes(x = instruction, y = Mean_pv,
+                                                  ymin = SEMs2$lowerSEM, ymax = SEMs2$upperSEM),
+                                                  width = 0.1, size = 1, color = "grey",
                                                   position = position_dodge(width = 0.9)) +
-            geom_point(data=includeAE, aes(x=instruction, y=pv), alpha = 1/7) +
-            geom_point(data=excludeAE, aes(x=instruction, y=pv), alpha = 1/7) +
+            geom_point(data = includeAE, aes(x = instruction, y = pv),
+                       size = 1, stroke = 0,
+                       alpha = 1/20) +
+            geom_point(data = excludeAE, aes(x = instruction, y = pv),
+                       size = 1, stroke = 0,
+                       alpha = 1/20) +
             ylab("Angular error (Degrees)") +
-            ggtitle("Single CW") +
+            ggtitle("Single CCW") +
             coord_fixed(ratio = 1/13) +
             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                   panel.background = element_blank(), axis.line = element_line(colour = "black"),
                   legend.title = element_blank(), legend.position = "none") +
-            scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
+            scale_y_continuous(breaks = seq(-30, +30, 10), limits = c(-30, 30))
   print(IEbars)
   
 }

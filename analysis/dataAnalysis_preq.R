@@ -1,13 +1,13 @@
-########## FOR PREQ DATA ONLY ##########
-### NOTE : wrong label - rotation are labelled opposite as of other seq exps 
+##### FOR DUAL PREQUENCE DATA ANALYSIS
+# NOTE: REVERSED LABEL TAGS 
 setwd('/Users/mayala/Desktop/preq data')
-subject_numbers <- c(1:31) 
+subject_numbers <- c(1:31)  # PARTICIPANT 1 EXCLUDED DUE TO HUGE BASELINE BIASES
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
-homey <- c(0) # if this is 0, no scaling will be done in taskAnalysis()
+homey <- c(0) # # IF THIS IS 0, NO SCALING WILL BE DONE IN TASKANALYSIS()
 
-##### function for plotting data #####
+##### FUNCTION FOR PLOTTING RAW DATA ONLY
 plotData <- function(){
   
   library(dplyr)
@@ -65,9 +65,13 @@ plotData <- function(){
   }
 }
 
-##### function for statistical analysis
+##### FUNCTION FOR GETTING STATS AND CLEAN PLOTS
 getStatistics <- function(){
+  
   library(dplyr)
+  library(ggplot2)
+  library(tidyr)
+  library(gginnards)
   
   filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
@@ -83,15 +87,40 @@ getStatistics <- function(){
     }
   }
   
-  tdf <- tbl_df(df) # convert to tibble for dplyr
-  ### NOTE: this is analyzing COLLAPSED rotations 
+  tdf <- tbl_df(df) 
+  tdf <- tdf %>% filter(participant != 1)  # PARTICIPANT 1 EXCLUDED DUE TO HUGE BASELINE BIASES
+  # NOW ANALYZING COLLAPSED ROTATIONS
   
-  # analyze adaptation
-  baselinelast <- tdf %>% filter(task==0) %>% filter(trial %in% c(57,58,59)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
-  block1<- tdf %>% filter(task==3) %>% filter(trial %in% c(0,1,2)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
-  blocklast<- tdf %>% filter(task==7) %>% filter(trial %in% c(21,22,23)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+  ################################
+  ################################
+  ################################
   
-  adaptdf<- rbind(block1,blocklast)
+  # ANALYZE LEARNING
+  baselinelast <- tdf %>%
+    filter(task == 0) %>%
+    filter(trial %in% c(57, 58, 59)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              pl = mean(pathlength, na.rm = TRUE),
+              block = mean(task))
+  
+  block1 <- tdf %>%
+    filter(task == 3) %>%
+    filter(trial %in% c(0, 1, 2)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              pl = mean(pathlength, na.rm = TRUE),
+              block = mean(task))
+  
+  blocklast <- tdf %>%
+    filter(task == 7) %>%
+    filter(trial %in% c(21, 22, 23)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              pl = mean(pathlength, na.rm = TRUE),
+              block = mean(task))
+  
+  adaptdf<- rbind(block1, blocklast)
   
   adaptdf$block <- factor(adaptdf$block)
   adaptdf$participant <- factor(adaptdf$participant)
@@ -101,23 +130,40 @@ getStatistics <- function(){
   # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
   # summary(RM_pl)
   boxplot(adaptdf$pv) # remove the intense outliers
-  adaptdf2 <- adaptdf %>% filter(participant != "4") %>%
+  
+  adaptdf2 <- adaptdf %>%
+    filter(participant != "4") %>%
     filter(participant != "6") %>%
     filter(participant != "24")    # adaptdf[-c(35,37,55),] # outliers
-  t.test(adaptdf2$pv[which(adaptdf2$block=="3")], adaptdf2$pv[which(adaptdf2$block=="7")], alternative ="greater", paired=TRUE )
+  
+  t.test(adaptdf2$pv[which(adaptdf2$block == "3")],
+         adaptdf2$pv[which(adaptdf2$block == "7")],
+         alternative ="greater", paired = TRUE )
   
   #### visualize blocked learning
   for (rot in sort(unique(tdf$prehome))){
     
-    dfplot1 <- tdf %>% filter(prehome==rot) %>% filter(task == 3)  %>% filter(participant != "4") %>%
+    dfplot1 <- tdf %>%
+      filter(prehome==rot) %>%
+      filter(task == 3)  %>%
+      filter(participant != "4") %>%
       filter(participant != "6") %>%
       filter(participant != "24")
-    dfplot2 <- tdf %>% filter(prehome==rot) %>% filter(task == 5)  %>% filter(participant != "4") %>%
+    
+    dfplot2 <- tdf %>%
+      filter(prehome==rot) %>%
+      filter(task == 5)  %>%
+      filter(participant != "4") %>%
       filter(participant != "6") %>%
       filter(participant != "24")
-    dfplot3 <- tdf %>% filter(prehome==rot) %>% filter(task == 7)  %>% filter(participant != "4") %>%
+    
+    dfplot3 <- tdf %>%
+      filter(prehome==rot) %>%
+      filter(task == 7) %>%
+      filter(participant != "4") %>%
       filter(participant != "6") %>%
       filter(participant != "24")
+    
     dfplot2$trial <- dfplot2$trial + 359
     dfplot3$trial <- dfplot3$trial + 359 + 359
     dfplot <- rbind(dfplot1, dfplot2, dfplot3)
@@ -143,18 +189,30 @@ getStatistics <- function(){
     print(bltrain)
   }
   
-  #######################################################################
-  ###################EDIT FOR PERCENT IMPROVEMENT #######################
-  #######################################################################
-  dfplot1 <- tdf  %>% filter(task == 3) %>% filter(participant != "4") %>%
+  ################################
+  ################################
+  ################################
+  
+  # ANALYZE PERCENT IMPROVEMENT
+  
+  dfplot1 <- tdf  %>%
+    filter(task == 3) %>%
+    filter(participant != "4") %>%
     filter(participant != "6") %>%
     filter(participant != "24")
-  dfplot2 <- tdf  %>% filter(task == 5)%>% filter(participant != "4") %>%
+  
+  dfplot2 <- tdf  %>%
+    filter(task == 5)%>%
+    filter(participant != "4") %>%
     filter(participant != "6") %>%
     filter(participant != "24")
-  dfplot3 <- tdf  %>% filter(task == 7) %>% filter(participant != "4") %>%
+  
+  dfplot3 <- tdf  %>%
+    filter(task == 7) %>%
+    filter(participant != "4") %>%
     filter(participant != "6") %>%
     filter(participant != "24")
+  
   dfplot2$trial <- dfplot2$trial + 359
   dfplot3$trial <- dfplot3$trial + 359 + 359
   dfplot <- rbind(dfplot1, dfplot2, dfplot3)
@@ -176,31 +234,95 @@ getStatistics <- function(){
   }
   # outliers
   boxplot(PI) # one outlier here but we already removed outliers above- don't wanna overdo it
-
   
   meanPI <- mean(PI, na.rm=TRUE)
   semPI <- sd(PI, na.rm=TRUE)/sqrt(length(PI))
-  barplot(meanPI, main="Percent Improvement", 
-          xlab="leadin exp", ylim=c(-100, 100))
+  #barplot(meanPI, main="Percent Improvement", 
+  #        xlab="leadin exp", ylim=c(-100, 100))
   
-  #######################################################################
-  ###############EDIT FOR REACH AFTEREFFECTS ANALYSIS####################
-  #######################################################################
+  t.test(PI, alternative = "greater") # IMPROVEMENT ACROSS TRAINING
   
-  # get df of just reach AEs first. baseline = -1; excludeAE = 0; includeAE = 1
-  baselineAE <- tdf %>% filter(task==1) %>% filter(trial %in% c(21,22,23)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = -1)
-  excludeAE <- tdf %>% filter(instruction=='exclude') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 0)
-  includeAE <- tdf %>% filter(instruction=='include') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 1)
+  PI <- tbl_df(PI) # ADD LABELS TO PLOT
+  PI <- PI %>% mutate(participant = 1:n(),
+                      group = "prequence",
+                      lowerSEM = meanPI - semPI,
+                      upperSEM = meanPI + semPI)
   
-  AEdf <- rbind(baselineAE, excludeAE, includeAE)
-  AEdf$block <- factor(AEdf$block)
-  AEdf$participant <- factor(AEdf$participant)
-  AEdf <-AEdf %>% mutate(group_instruction=1) # add group label for later 
+  PIplot <- ggplot(data = PI, aes(x = group, y = value)) +
+    stat_summary(fun.y = mean, geom = "bar", na.rm = TRUE) +
+    geom_errorbar(data = PI, mapping = aes(x = group, y = value, 
+                                           ymin = PI$lowerSEM, ymax = PI$upperSEM),
+                  width = 0.1, size = 0.5, color = "grey",
+                  position = position_dodge(width = 0.9)) +
+    geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
+    ylab("Percentage Improvement") +
+    ggtitle("Dual Prequence") +
+    coord_fixed(ratio = 1/13) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+          legend.title = element_blank(), legend.position = "none") 
+    #scale_y_continuous(breaks = seq(-100, +100, 50), limits = c(-100,100))
   
-  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired = TRUE )
-  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater" )
-  t.test(includeAE$pv-baselineAE$pv, excludeAE$pv-baselineAE$pv, alternative ="greater" , paired = TRUE)
+  move_layers(PIplot,"GeomPoint", position = "bottom")
   
+  print(PIplot)
+  
+  ################################
+  ################################
+  ################################
+  
+  # ANALYZE REACH AFTEREFFECTS
+  
+  # COLLAPSED ROTATIONS FIRST
+  sequence_baselineAE <- tdf %>%
+    filter(task == 1) %>%
+    drop_na(pv_angle_n) %>% 
+    filter(trial %in% c(21,22,23)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              instruction = 'baseline')
+  
+  sequence_excludeAE <- tdf %>%
+    filter(instruction == 'exclude') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              instruction = 'exclude')
+  
+   sequence_includeAE <- tdf %>%
+    filter(instruction =='include') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+              instruction = 'include')
+  
+  # AE ANALYSIS BUT BASELINE SEPARATE
+  t.test(sequence_excludeAE$pv, sequence_baselineAE$pv,
+         alternative = "greater",
+         paired = TRUE) 
+  
+  t.test(sequence_includeAE$pv - sequence_baselineAE$pv,
+         sequence_excludeAE$pv - sequence_baselineAE$pv,
+         alternative = "greater",
+         paired = TRUE )
+  
+  # SUBTRACT BASELINE FOR FIGURES & MORE AE ANALYSIS
+  sequence_excludeAE$pv <- sequence_excludeAE$pv - sequence_baselineAE$pv
+  sequence_includeAE$pv <- sequence_includeAE$pv - sequence_baselineAE$pv
+  
+  # AE ANALYSIS, BASELINE SUBTRACTED
+  t.test(sequence_excludeAE$pv,
+         mu=0,
+         alternative ="greater") # IMPLICIT LEARNING MEASURE
+  
+  ################################
+  ################################
+  ################################
+  
+  # REACH AE VISUALIZATIONS - BASELINE DEDUCTED - SIGNED ERRORS
+
   ## visualize reach AEs
   tdf_NCs_rot <- tdf %>% filter(instruction == 'exclude' | instruction == 'include') %>% filter(trial == 0) 
   ggplot(tdf_NCs_rot, aes(instruction, pv_angle, colour = factor(prehome))) +
@@ -210,7 +332,7 @@ getStatistics <- function(){
     theme_classic() +
     ggtitle("PreQ Dual Group")  # note : participant 6 has one outlier and the remaining also an outlier in boxplots
   
-  ## use these for stats - double-checking that reach AEs are in the correct direction 
+  ## AEs LOOK WEIRD - DOUBLE CHECK THAT THEY'RE GOING THE EXPECTED DIRECTIONS
   
   tdf_NCs_baseline.summary1 <- tdf %>%
     filter(prehome=="1") %>%
@@ -226,7 +348,7 @@ getStatistics <- function(){
     group_by(participant) %>%
     summarise(meanaebase = mean(pv_angle, na.rm=T))
   
-  tdf_NCs_rot.summary1 <- tdf_NCs_rot %>%   #note these are only first trial
+  tdf_NCs_rot.summary1 <- tdf_NCs_rot %>%   # NOTE - ONLY FIRST TRIAL
     filter(prehome=="1") %>%
     filter(instruction == "include") %>%
     group_by(participant) %>%
@@ -251,41 +373,286 @@ getStatistics <- function(){
     group_by(participant) %>%
     summarise(meanae = mean(pv_angle, na.rm=T))
   # double check that AEs are indeed not significant from baseline 
-  # yy <- left_join(tdf_NCs_rot.summary4,tdf_NCs_baseline.summary2 )
-  # t.test(yy$meanae,yy$meanaebase,paired = TRUE,alternative = "greater")
+  #yy <- left_join(tdf_NCs_rot.summary4,tdf_NCs_baseline.summary2 )
+  #t.test(yy$meanae,yy$meanaebase,paired = TRUE,alternative = "greater")
   
   ## more visualizations of AE
-  SEMs <- NA
-  for (ph in sort(unique(tdf$prehome))) {
-    for (instruct in sort(unique(tdf$instruction))) {
-      x <- tdf %>% filter(prehome == ph ) %>%
-        filter(instruction == instruct) %>%
-        filter(trial == 0) %>%
-        group_by(participant) %>% 
-        group_by(trial) %>%
-        summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
-                                      SEM_pv = SD_pv/sqrt(length(unique(participant))), 
-                                      instruction = instruct, prehome = ph, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
-      
-      if (is.data.frame(SEMs) == TRUE ) {
-        SEMs <- rbind(SEMs, x)
-      } else {
-        SEMs <- x
-      }
-    }
-  }   # note that due to the counterbalance mistake for participants 1-9, group by participants (so they only get one score in the mean)
+  # SEMs <- NA
+  # for (ph in sort(unique(tdf$prehome))) {
+  #   for (instruct in sort(unique(tdf$instruction))) {
+  #     x <- tdf %>% filter(prehome == ph ) %>%
+  #       filter(instruction == instruct) %>%
+  #       filter(trial == 0) %>%
+  #       group_by(participant) %>% 
+  #       group_by(trial) %>%
+  #       summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+  #                                     SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+  #                                     instruction = instruct, prehome = ph, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
+  #     
+  #     if (is.data.frame(SEMs) == TRUE ) {
+  #       SEMs <- rbind(SEMs, x)
+  #     } else {
+  #       SEMs <- x
+  #     }
+  #   }
+  # }   # note that due to the counterbalance mistake for participants 1-9, group by participants (so they only get one score in the mean)
+
+  sequence_baselineAE_CCW <- tdf %>%
+    filter(prehome == -1) %>%
+    filter(task == 1) %>%
+    drop_na(pv_angle_n) %>% 
+    filter(trial %in% c(18:23)) %>% # BASELINE HAS BOTH GARAGES & NEED 3 TRIALS FOR BASELINE BLOCK
+    group_by(participant) %>%
+    summarise(pvB = mean(pv_angle, na.rm = TRUE))
+  
+  sequence_baselineAE_CW <- tdf %>%
+    filter(prehome == 1) %>%
+    filter(task == 1) %>%
+    drop_na(pv_angle_n) %>% 
+    filter(trial %in% c(18:23)) %>%
+    group_by(participant) %>%
+    summarise(pvB = mean(pv_angle, na.rm = TRUE))
+  
+  sequence_excludeAE_CCW <- tdf %>% # NOTE HERE A COUPLE PARTICIPANTS DO NOT HAVE ALL CONDITIONS
+    filter(prehome == -1) %>%
+    filter(instruction == 'exclude') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
+              prehome = unique(prehome),
+              instruction = 'exclude')
+  sequence_excludeAE_CCW <- inner_join(sequence_baselineAE_CCW,
+                                       sequence_excludeAE_CCW,
+                                       by = "participant")
+  sequence_excludeAE_CCW$pv <- sequence_excludeAE_CCW$pv - sequence_excludeAE_CCW$pvB
+  
+  sequence_excludeAE_CW <- tdf %>%
+    filter(prehome == 1) %>%
+    filter(instruction == 'exclude') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
+              prehome = unique(prehome),
+              instruction = 'exclude')
+  sequence_excludeAE_CW <- inner_join(sequence_baselineAE_CW,
+                                       sequence_excludeAE_CW,
+                                       by = "participant")
+  sequence_excludeAE_CW$pv <- sequence_excludeAE_CW$pv - sequence_excludeAE_CW$pvB
+  
+  sequence_includeAE_CCW <- tdf %>%
+    filter(prehome == -1) %>%
+    filter(instruction == 'include') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
+              prehome = unique(prehome),
+              instruction = 'include')
+  sequence_includeAE_CCW <- inner_join(sequence_baselineAE_CCW,
+                                      sequence_includeAE_CCW,
+                                      by = "participant")
+  sequence_includeAE_CCW$pv <- sequence_includeAE_CCW$pv - sequence_includeAE_CCW$pvB
+  
+  sequence_includeAE_CW <- tdf %>%
+    filter(prehome == 1) %>%
+    filter(instruction == 'include') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    summarise(pv = mean(pv_angle, na.rm=TRUE),
+              prehome = unique(prehome),
+              instruction = 'include')
+  sequence_includeAE_CW <- inner_join(sequence_baselineAE_CW,
+                                       sequence_includeAE_CW,
+                                       by = "participant")
+  sequence_includeAE_CW$pv <- sequence_includeAE_CW$pv - sequence_includeAE_CW$pvB
+  
+  
+  ## ANALYSE REACH AE FOR SEPARATED ROTATIONS
+  t.test(sequence_excludeAE_CW$pv,
+         mu = 0,
+         alternative = "greater")
+  
+  t.test(sequence_excludeAE_CCW$pv,
+         mu = 0,
+         alternative = "less")
+  
+  ## COLLECT BASELINE-SUBTRACTED REACH AEs
+  sequence_excludeAE_CCW.summary <- sequence_excludeAE_CCW %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "exclude",
+              prehome = "-1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
+  
+  sequence_excludeAE_CW.summary <- sequence_excludeAE_CW %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "exclude",
+              prehome = "1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
+  
+  sequence_includeAE_CCW.summary <- sequence_includeAE_CCW %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "include",
+              prehome = "-1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
+  
+  sequence_includeAE_CW.summary <- sequence_includeAE_CW %>%
+    summarise(Mean_pv = mean(pv, na.rm=TRUE),
+              SD_pv = sd(pv, na.rm=TRUE),
+              SEM_pv = SD_pv/sqrt(length(unique(participant))),
+              instruction = "include",
+              prehome = "1",
+              lowerSEM = Mean_pv-SEM_pv,
+              upperSEM = Mean_pv + SEM_pv)
+  
+  SEMs <- rbind(sequence_excludeAE_CCW.summary, 
+                sequence_excludeAE_CW.summary,
+                sequence_includeAE_CCW.summary,
+                sequence_includeAE_CW.summary)
+  
+  
+  # SEMs <- NA
+  #  for (garage in sort(unique(tdf$prehome))) {
+  #    for (instruct in sort(unique(tdf$instruction))) {
+  #      x <- tdf %>% filter(prehome == garage ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
+  #      group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+  #                                    SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+  #                                    instruction = instruct, prehome = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
+  #      
+  #      if (is.data.frame(SEMs) == TRUE ) {
+  #        SEMs <- rbind(SEMs, x)
+  #      } else {
+  #        SEMs <- x
+  #      }
+  #      }
+  #    }
+  
   ## bar plot I/E Reach aftereffects ##
-  IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(prehome))) +
-    geom_bar(stat="identity", position ="dodge") +
-    geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
-                  width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +
+  IEbars <- ggplot(data = SEMs,
+                   aes(x = instruction, y = Mean_pv, fill = as.factor(prehome))) +
+    geom_bar(stat = "identity", position = "dodge") +
+    geom_errorbar(data = SEMs, mapping = aes(x = instruction, y = Mean_pv, 
+                                             ymin = SEMs$lowerSEM, ymax = SEMs$upperSEM),
+                  width = 0.1, size = 0.5, color = "grey",
+                  position = position_dodge(width = 0.9)) +
+    geom_point(data = sequence_excludeAE_CCW, size = 1, stroke = 0,
+               aes(x = instruction, y = pv), alpha = 1/20,
+               position = position_dodge(width = 0.5, preserve = "single")) +
+    geom_point(data = sequence_excludeAE_CW, size = 1, stroke = 0,
+               aes(x = instruction, y = pv), alpha = 1/20,
+               position = position_dodge(width = -0.5, preserve = "single")) +
+    geom_point(data = sequence_includeAE_CCW, size = 1, stroke = 0,
+               aes(x = instruction, y = pv), alpha = 1/20,
+               position = position_dodge(width = 0.5, preserve = "single")) +
+    geom_point(data = sequence_includeAE_CW, size = 1, stroke = 0,
+               aes(x = instruction, y = pv), alpha = 1/20,
+               position = position_dodge(width = -0.5, preserve = "single")) +
     ylab("Angular error (Degrees)") +
-    ggtitle("Dual Preq")+
+    ggtitle("Dual Prequence") +
     coord_fixed(ratio = 1/13) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-    scale_y_continuous(breaks=seq(-30,+30,10), limits = c(-30,30))
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+          legend.title = element_blank(), legend.position = "none") +
+    scale_y_continuous(breaks = seq(-30, +30, 10), limits = c(-30, 30))
+  move_layers(IEbars, "GeomPoint", position = "bottom")
+  
   print(IEbars)
   
+## ANALYZE AE BASELINE DEDUCTED:
+  # GETS SIGNED ERRORS FIRST,
+  # DEDUCTS BASELINE BASED ON PREHOME,
+  # FLIPS THE SIGN ON THE NEGATIVE ROTATION.
+  
+  YY <- tdf %>%
+    filter(instruction == 'exclude') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    filter(task == min(task)) %>%
+    select(participant, prehome, instruction, pv_angle, pv_angle_n)
+  
+  YY <- inner_join(YY, sequence_baselineAE_CW, by = "participant")
+  YY <- inner_join(YY, sequence_baselineAE_CCW, by = "participant")
+  
+  YY$pv_angle_nR <- NA
+  for (rowno in 1:nrow(YY)) {
+    if (YY$prehome[rowno] == -1){
+      YY$pv_angle_nR[rowno] <- (YY$pv_angle[rowno] - YY$pvB.y[rowno])*-1 # NOTE - REVERSED LABELS
+    } else {
+      YY$pv_angle_nR[rowno] <- YY$pv_angle[rowno] + YY$pvB.x[rowno]
+      
+    }
+  }
+  
+  t.test(YY$pv_angle_nR,
+         mu = 0,
+         alternative = "greater") # IMPLICIT LEARNING MEASURE
+  
+  
+  # INCLUDE-STRATEGY REACH AEs
+  ZZ <- tdf %>%
+    filter(instruction == 'include') %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    filter(task == min(task)) %>%
+    select(participant, prehome, instruction, pv_angle, pv_angle_n)
+  
+  ZZ <- inner_join(ZZ, sequence_baselineAE_CW, by = "participant")
+  ZZ <- inner_join(ZZ, sequence_baselineAE_CCW, by = "participant")
+  
+  ZZ$pv_angle_nR <- NA
+  for (rowno in 1:nrow(ZZ)) {
+    if (ZZ$prehome[rowno] == -1){
+      ZZ$pv_angle_nR[rowno] <- (ZZ$pv_angle[rowno] - ZZ$pvB.x[rowno])*-1 # NOTE - REVERSED LABELS
+    } else {
+      ZZ$pv_angle_nR[rowno] <- (ZZ$pv_angle[rowno] + ZZ$pvB.y[rowno])
+      
+    }
+  }
+  
+  t.test(ZZ$pv_angle_nR,
+         YY$pv_angle_nR,
+         paired = TRUE,
+         alternative = "greater") # EXPLICIT LEARNING MEASURE
+  
+  # WITHIN-STRATEGY REACH AEs
+  
+  sequence_withinAE <- tdf %>%
+    filter(task == 6) %>%
+    drop_na(pv_angle_n) %>% 
+    group_by(participant) %>%
+    filter(trial == min(trial)) %>%
+    select(participant, prehome, instruction, pv_angle, pv_angle_n)
+  
+  sequence_withinAE <- inner_join(sequence_withinAE, sequence_baselineAE_CW, by = "participant")
+  sequence_withinAE <- inner_join(sequence_withinAE, sequence_baselineAE_CCW, by = "participant")
+  
+  sequence_withinAE$pv_angle_nR <- NA
+  for (rowno in 1:nrow(ZZ)) {
+    if (sequence_withinAE$prehome[rowno] == -1){
+      sequence_withinAE$pv_angle_nR[rowno] <- (sequence_withinAE$pv_angle[rowno] - sequence_withinAE$pvB.x[rowno])*-1
+    } else {
+      sequence_withinAE$pv_angle_nR[rowno] <- (sequence_withinAE$pv_angle[rowno] + sequence_withinAE$pvB.y[rowno])
+      
+    }
+  }
+  
+  t.test(sequence_withinAE$pv_angle_nR,
+         YY$pv_angle_nR,
+         paired = TRUE,
+         alternative = "greater")
+
 return()
 }
