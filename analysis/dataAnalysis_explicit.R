@@ -66,7 +66,9 @@ plotData <- function(){
 }
 ##### function for statistical analysis
 getStatistics <- function(){
+  
   library(dplyr)
+  library(tidyr)
   library(ggplot2)
   library(gginnards)
   
@@ -211,39 +213,58 @@ getStatistics <- function(){
   #######################################################################
   
   # get df of just reach AEs first. baseline = -1; excludeAE = 0; includeAE = 1
-  baselineAE <- tdf %>% filter(task==1) %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = -1)
-  excludeAE <- tdf %>% filter(instruction=='exclude') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 0)
-  includeAE <- tdf %>% filter(instruction=='include') %>% filter(trial %in% c(0)) %>% group_by(participant) %>% summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 1)
+  baselineAE <- tdf %>%
+      filter(task == 1) %>%
+      filter(trial %in% c(0)) %>%
+      group_by(participant) %>%
+      summarise(pv = mean(pv_angle_n, na.rm = TRUE),
+                block = -1)
   
-  AEdf <- rbind(baselineAE, excludeAE, includeAE)
+  excludeAE <- tdf %>%
+    filter(instruction == 'exclude') %>%
+    filter(trial %in% c(0)) %>%
+    group_by(participant) %>%
+    summarise(pv = mean(pv_angle_n, na.rm = TRUE), block = 0)
+  
+  includeAE <- tdf %>%
+    filter(instruction == 'include') %>%
+    filter(trial %in% c(0)) %>%
+    group_by(participant) %>% 
+    summarise(pv = mean(pv_angle_n, na.rm=TRUE), block = 1)
+  
+  AEdf <- rbind(baselineAE,
+                excludeAE,
+                includeAE)
   AEdf$block <- factor(AEdf$block)
   AEdf$participant <- factor(AEdf$participant)
-  AEdf <- sequence_AEdf %>% mutate(group_instruction=1) # add group label for later 
   
-  t.test(excludeAE$pv, baselineAE$pv, alternative ="greater", paired=TRUE )
-  t.test(excludeAE$pv-baselineAE$pv, mu=0, alternative ="greater", paired=TRUE )
-  t.test(includeAE$pv-baselineAE$pv, excludeAE$pv-baselineAE$pv, alternative ="greater",paired=TRUE )
+  AEdf <- sequence_AEdf %>%
+    mutate(group_instruction = 1) # add group label for later 
+  
+  t.test(excludeAE$pv, baselineAE$pv, alternative = "greater", paired = TRUE )
+  t.test(excludeAE$pv - baselineAE$pv, mu = 0, alternative = "greater")
+  t.test(includeAE$pv - baselineAE$pv, excludeAE$pv - baselineAE$pv, alternative = "greater", paired = TRUE )
 
   ## REACH AE Visualizations
-  ##  get SEMs for errorbar ##
   
-  SEMs <- NA
-  for (garage in sort(unique(tdf$garage_location))) {
-    for (instruct in sort(unique(tdf$instruction))) {
-      x <- tdf %>% filter(garage_location == garage ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
-        group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
-                                      SEM_pv = SD_pv/sqrt(length(unique(participant))), 
-                                      instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
-      
-      if (is.data.frame(SEMs) == TRUE ) {
-        SEMs <- rbind(SEMs, x)
-      } else {
-        SEMs <- x
-      }
-    }
-  }
+  # SEMs <- NA
+  # for (garage in sort(unique(tdf$garage_location))) {
+  #   for (instruct in sort(unique(tdf$instruction))) {
+  #     x <- tdf %>% filter(garage_location == garage ) %>% filter(instruction == instruct) %>% filter(trial == 0) %>% group_by(participant) %>%
+  #       group_by(trial) %>% summarise(Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
+  #                                     SEM_pv = SD_pv/sqrt(length(unique(participant))), 
+  #                                     instruction = instruct, garage_location = garage, lowerSEM = Mean_pv-SEM_pv, upperSEM = Mean_pv + SEM_pv)
+  #     
+  #     if (is.data.frame(SEMs) == TRUE ) {
+  #       SEMs <- rbind(SEMs, x)
+  #     } else {
+  #       SEMs <- x
+  #     }
+  #   }
+  # }
+  
   ## bar plot I/E Reach aftereffects ##
-  IEbars<- ggplot(data=SEMs, aes(x=instruction, y=Mean_pv, fill=as.factor(garage_location))) +
+  IEbars <- ggplot(data = SEMs, aes(x = instruction, y = Mean_pv, fill = as.factor(garage_location))) +
     geom_bar(stat="identity", position ="dodge") +
     geom_errorbar(data=SEMs, mapping=aes(x=instruction, y=Mean_pv, ymin=SEMs$lowerSEM, ymax=SEMs$upperSEM),
                   width=0.1, size=1, color="grey", position = position_dodge(width = 0.9)) +

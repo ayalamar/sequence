@@ -72,6 +72,7 @@ getStatistics <- function(){
   library(ggplot2)
   library(tidyr)
   library(gginnards)
+  library(ggbeeswarm)
   
   filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
@@ -469,7 +470,11 @@ getStatistics <- function(){
                                        by = "participant")
   sequence_includeAE_CW$pv <- sequence_includeAE_CW$pv - sequence_includeAE_CW$pvB
   
-  
+  swarms <- rbind(sequence_excludeAE_CCW,
+                  sequence_excludeAE_CW,
+                  sequence_includeAE_CCW,
+                  sequence_includeAE_CW)
+    
   ## ANALYSE REACH AE FOR SEPARATED ROTATIONS
   t.test(sequence_excludeAE_CW$pv,
          mu = 0,
@@ -544,20 +549,24 @@ getStatistics <- function(){
     geom_bar(stat = "identity", position = "dodge") +
     geom_errorbar(data = SEMs, mapping = aes(x = instruction, y = Mean_pv, 
                                              ymin = SEMs$lowerSEM, ymax = SEMs$upperSEM),
-                  width = 0.1, size = 0.5, color = "grey",
+                  width = 0.2, size = 0.5, color = "black",
                   position = position_dodge(width = 0.9)) +
-    geom_point(data = sequence_excludeAE_CCW, size = 1, stroke = 0,
-               aes(x = instruction, y = pv), alpha = 1/20,
-               position = position_dodge(width = 0.5, preserve = "single")) +
-    geom_point(data = sequence_excludeAE_CW, size = 1, stroke = 0,
-               aes(x = instruction, y = pv), alpha = 1/20,
-               position = position_dodge(width = -0.5, preserve = "single")) +
-    geom_point(data = sequence_includeAE_CCW, size = 1, stroke = 0,
-               aes(x = instruction, y = pv), alpha = 1/20,
-               position = position_dodge(width = 0.5, preserve = "single")) +
-    geom_point(data = sequence_includeAE_CW, size = 1, stroke = 0,
-               aes(x = instruction, y = pv), alpha = 1/20,
-               position = position_dodge(width = -0.5, preserve = "single")) +
+    geom_beeswarm(data = swarms, aes(x = instruction, y = pv),
+                  alpha = 1/7,
+                  dodge.width = .9, cex = 3,
+                  stroke = 0.3) +
+    # geom_point(data = sequence_excludeAE_CCW, size = 1, stroke = 0,
+    #            aes(x = instruction, y = pv), alpha = 1/20,
+    #            position = position_dodge(width = 0.5, preserve = "single")) +
+    # geom_point(data = sequence_excludeAE_CW, size = 1, stroke = 0,
+    #            aes(x = instruction, y = pv), alpha = 1/20,
+    #            position = position_dodge(width = -0.5, preserve = "single")) +
+    # geom_point(data = sequence_includeAE_CCW, size = 1, stroke = 0,
+    #            aes(x = instruction, y = pv), alpha = 1/20,
+    #            position = position_dodge(width = 0.5, preserve = "single")) +
+    # geom_point(data = sequence_includeAE_CW, size = 1, stroke = 0,
+    #            aes(x = instruction, y = pv), alpha = 1/20,
+    #            position = position_dodge(width = -0.5, preserve = "single")) +
     ylab("Angular error (Degrees)") +
     ggtitle("Dual Prequence") +
     coord_fixed(ratio = 1/13) +
@@ -565,7 +574,7 @@ getStatistics <- function(){
           panel.background = element_blank(), axis.line = element_line(colour = "black"),
           legend.title = element_blank(), legend.position = "none") +
     scale_y_continuous(breaks = seq(-30, +30, 10), limits = c(-30, 30))
-  move_layers(IEbars, "GeomPoint", position = "bottom")
+  # move_layers(IEbars, "GeomPoint", position = "bottom")
   
   print(IEbars)
   
