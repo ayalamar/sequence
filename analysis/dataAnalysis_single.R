@@ -1,6 +1,6 @@
 ##### FOR SINGLE CW AND CCW CONTROL GROUPS
-#setwd('/Users/mayala/Desktop/single CW data')
-setwd('/Users/mayala/Desktop/single CCW data')
+setwd('/Users/mayala/Desktop/single CW data')
+#setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # SAME FOR SINGLE CW & CCW GROUPS
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -72,6 +72,7 @@ getStatistics <- function(){
   library(tidyr)
   library(ggplot2)
   library(gginnards)
+  library(ggbeeswarm)
   
   filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
@@ -170,25 +171,58 @@ getStatistics <- function(){
     dfplot3$trial <- dfplot3$trial + 179 + 179
     dfplot <- rbind(dfplot1, dfplot2, dfplot3)
     
-    traindf <- dfplot %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
-                                                                                  SEM_pl = SD_pl/sqrt(length(unique(participant))), Mean_pv = mean(pv_angle, na.rm=TRUE),                                                                                SD_pv = sd(pv_angle, na.rm=TRUE),SEM_pv = SD_pv/sqrt(length(unique(participant))))
-    bl1 <- traindf[1:3,] %>% mutate(block = 1)
-    bl2 <- traindf[4:6,] %>% mutate(block = 2)
-    bll <- traindf[(nrow(traindf)-2):nrow(traindf),] %>% mutate(block = 7)
-    combobl <- rbind(bl1, bl2, bll)
-    combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
+    # traindf <- dfplot %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
+    #                                                                               SEM_pl = SD_pl/sqrt(length(unique(participant))), Mean_pv = mean(pv_angle, na.rm=TRUE),                                                                                SD_pv = sd(pv_angle, na.rm=TRUE),SEM_pv = SD_pv/sqrt(length(unique(participant))))
+    # bl1 <- traindf[1:3,] %>% mutate(block = 1)
+    # bl2 <- traindf[4:6,] %>% mutate(block = 2)
+    # bll <- traindf[(nrow(traindf)-2):nrow(traindf),] %>% mutate(block = 7)
+    # combobl <- rbind(bl1, bl2, bll)
+    # combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
+    # 
+    ppdf1 <- dfplot %>%
+      filter(trial %in% c(0,1,2)) %>%
+      group_by(participant) %>%
+      mutate(block = 1, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
+      select(participant, block, blockmean) %>%
+      distinct(participant, .keep_all = TRUE)
+    ppdf2 <- dfplot %>%
+      filter(trial %in% c(3,4,5)) %>%
+      group_by(participant) %>%
+      mutate(block = 2, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
+      select(participant, block, blockmean) %>%
+      distinct(participant, .keep_all = TRUE)
+    ppdf7 <- dfplot %>%
+      group_by(participant) %>%
+      filter(trial %in% c(max(trial), max(trial) - 1, max(trial) - 2)) %>%
+      mutate(block = 7, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
+      select(participant, block, blockmean) %>%
+      distinct(participant, .keep_all = TRUE)
+    ppdf_full <- rbind(ppdf1, ppdf2, ppdf7)
     
-    bltrain <- ggplot(data=combobl, aes(x=block, y=pv)) +
+    traindf <- ppdf_full %>%
+      group_by(block) %>%
+      mutate(pv = mean(blockmean, na.rm = TRUE),
+             sdpv = sd(blockmean, na.rm = TRUE),
+             sem = sdpv/sqrt(length(unique(participant)))) 
+    
+    # block training plots
+    bltrain <- ggplot(data=traindf, aes(x=block, y=pv)) +
       geom_point() +
-      geom_line(data=combobl, aes(x=block, y=pv)) +
-      geom_ribbon(data=combobl, aes(ymin=pv-sem, ymax= pv+sem), alpha=0.4) +
+      geom_line(data=traindf, aes(x=block, y=pv)) +
+      geom_line(data=ppdf_full, aes(x=block, y=blockmean, colour=as.factor(participant)), alpha = 0.1) + 
+      geom_ribbon(data=traindf, aes(ymin=pv-sem, ymax= pv+sem), alpha=0.4) +
+      coord_fixed(ratio = 1/7) +
       ylim(-50,50) +
       xlim(1,7) +
-      coord_fixed(ratio = 1/7) +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-      ggtitle('Single experiment - Blocked training')
+            panel.background = element_blank(), axis.line = element_line(colour = "black"),
+            legend.title = element_blank(), legend.position = "none") +
+      ggtitle('CW ONLY') 
+    
     print(bltrain)
+    move_layers(bltrain, "GeomRibbon", position = "top")
+    move_layers(bltrain, "GeomPoint", position = "top")
+    
   }
   
   ################################
@@ -232,9 +266,6 @@ getStatistics <- function(){
   
   meanPI <- mean(PI, na.rm = TRUE)
   semPI <- sd(PI, na.rm = TRUE)/sqrt(length(PI))
-  #barplot(meanPI, main = "Percent Improvement", 
-  #        xlab = "sequence exp", ylim = c(-100, 100))
-  #errbar(1, meanPI, meanPI + semPI, meanPI - semPI, ylim = c(-100, 100))
   
   t.test(PI, alternative = "greater") # IMPROVEMENT ACROSS TRAINING
   
@@ -248,18 +279,22 @@ getStatistics <- function(){
     stat_summary(fun.y = mean, geom = "bar", na.rm = TRUE) +
     geom_errorbar(data = PI, mapping = aes(x = group, y = value, 
                                            ymin = PI$lowerSEM, ymax = PI$upperSEM),
-                  width = 0.1, size = 0.5, color = "grey",
+                  width = 0.1, size = 0.5, color = "black",
                   position = position_dodge(width = 0.9)) +
-    geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
+    geom_beeswarm(data = PI, aes(x = group, y = value),
+                  alpha = 1/7,
+                  dodge.width = 2, cex = 3,
+                  stroke = 0.3) +
+    #geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
     ylab("Percentage Improvement") +
-    ggtitle("Single CW Sequence") +
-    coord_fixed(ratio = 1/13) +
+    ggtitle("Single CCW Sequence") +
+    coord_fixed(ratio = 1/30) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_line(colour = "black"),
           legend.title = element_blank(), legend.position = "none") +
-    scale_y_continuous(breaks = seq(-100, +100, 50), limits = c(-100,100))
+    scale_y_continuous(breaks = seq(-150, +150, 50), limits = c(-150,150))
   
-  move_layers(PIplot,"GeomPoint", position = "bottom")
+  #move_layers(PIplot,"GeomPoint", position = "bottom")
   
   print(PIplot)
   
@@ -305,6 +340,9 @@ getStatistics <- function(){
   t.test(excludeAE$pv, mu=0, alternative ="greater") # is there implicit learning?
   t.test(includeAE$pv, excludeAE$pv, alternative ="greater", paired = TRUE) # is there explicit learning?
   
+  swarms <- rbind(excludeAE,
+                  includeAE)
+  
   ## VISUALIZE RAW I/E NO-CURSORS
   tdf_NCs_rot <- tdf %>%
     filter(instruction == 'exclude' | instruction == 'include') %>%
@@ -344,16 +382,20 @@ getStatistics <- function(){
             geom_bar(stat = "identity", position = "dodge") +
             geom_errorbar(data = SEMs2, mapping = aes(x = instruction, y = Mean_pv,
                                                   ymin = SEMs2$lowerSEM, ymax = SEMs2$upperSEM),
-                                                  width = 0.1, size = 1, color = "grey",
+                                                  width = 0.2, size = 0.5, color = "black",
                                                   position = position_dodge(width = 0.9)) +
-            geom_point(data = includeAE, aes(x = instruction, y = pv),
-                       size = 1, stroke = 0,
-                       alpha = 1/20) +
-            geom_point(data = excludeAE, aes(x = instruction, y = pv),
-                       size = 1, stroke = 0,
-                       alpha = 1/20) +
+            geom_beeswarm(data = swarms, aes(x = instruction, y = pv),
+                  alpha = 1/7,
+                  dodge.width = .9, cex = 3,
+                  stroke = 0.3) +
+            # geom_point(data = includeAE, aes(x = instruction, y = pv),
+            #            size = 1, stroke = 0,
+            #            alpha = 1/20) +
+            # geom_point(data = excludeAE, aes(x = instruction, y = pv),
+            #            size = 1, stroke = 0,
+            #            alpha = 1/20) +
             ylab("Angular error (Degrees)") +
-            ggtitle("Single CCW") +
+            ggtitle("Single CW") +
             coord_fixed(ratio = 1/13) +
             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                   panel.background = element_blank(), axis.line = element_line(colour = "black"),
