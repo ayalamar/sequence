@@ -1,6 +1,6 @@
 ##### FOR SINGLE CW AND CCW CONTROL GROUPS
-setwd('/Users/mayala/Desktop/single CW data')
-#setwd('/Users/mayala/Desktop/single CCW data')
+#setwd('/Users/mayala/Desktop/single CW data')
+setwd('/Users/mayala/Desktop/single CCW data')
 
 subject_numbers <- c(1:10) # SAME FOR SINGLE CW & CCW GROUPS
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -223,6 +223,10 @@ getStatistics <- function(){
     move_layers(bltrain, "GeomRibbon", position = "top")
     move_layers(bltrain, "GeomPoint", position = "top")
     
+    traindf <- traindf %>% # NEED THIS FOR OMNIBUS TESTS IN DUAL DATA ANALYSIS LATER
+      mutate(rotation = rot)
+    outfile_name <- sprintf('SINGLE_LCs_%s.csv', rot)
+    write.csv(traindf, file = outfile_name, row.names = FALSE)  
   }
   
   ################################

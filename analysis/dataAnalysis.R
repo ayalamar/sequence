@@ -1,9 +1,9 @@
 ##### MASTER SCRIPT FOR ANALYSIS AND PLOTS FOR SEQ, CONSEQ, STATIC EXPERIMENTS
-setwd('/Users/mayala/Desktop/static data')
+setwd('/Users/mayala/Desktop/seq data')
 
 #subject_numbers <- c(1:7, 9:31) # CONSEQUENCE EXPERIMENT
-#subject_numbers <- c(3:9, 11:17, 20:33) # SEQUENCE EXPERIMENT
-subject_numbers <- c(1:12) # STATIC EXPERIMENT
+subject_numbers <- c(3:9, 11:17, 20:33) # SEQUENCE EXPERIMENT
+#subject_numbers <- c(1:12) # STATIC EXPERIMENT
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
@@ -135,7 +135,7 @@ getStatistics <- function(){
   # mod1 <- ezANOVA(data = adaptdf,
   #                 dv = pv,
   #                 wid = participant,
-  #                 within=.(grg,block),
+  #                 within=.(block),
   #                 detailed = TRUE)
   
   # VISUALIZE LEARNING
@@ -243,6 +243,9 @@ getStatistics <- function(){
              sdpv = sd(blockmean, na.rm = TRUE),
              sem = sdpv/sqrt(length(unique(participant)))) 
     
+    outfile_name = sprintf('DUAL_LCs_%s.csv', rot)
+    write.csv(traindf, file = outfile_name, row.names = FALSE)  
+    
     # block training plots
     bltrain <- ggplot(data=traindf, aes(x=block, y=pv)) +
       geom_point() +
@@ -262,6 +265,39 @@ getStatistics <- function(){
     move_layers(bltrain, "GeomPoint", position = "top")
     
   }
+  
+  ################################
+  ################################
+  ################################
+
+  # OMNIBUS TESTS
+  library(ez)
+  # LOAD SINGLE LCs
+  CW_ONLY <- read.csv("SINGLE_LCs_1.csv", header = TRUE)
+  CCW_ONLY <- read.csv("SINGLE_LCs_-1.csv", header = TRUE)
+  DUAL_CW <- read.csv("DUAL_LCs_1.csv", header = TRUE)
+  DUAL_CCW <- read.csv("DUAL_LCs_-1.csv", header = TRUE)
+  
+  CW_ONLY <- CW_ONLY %>% mutate(group = 'CW', dual = 0) %>% select(-rotation)
+  CCW_ONLY <- CCW_ONLY %>% mutate(group = 'CCW', dual = 0) %>% select(-rotation)
+  DUAL_CW <- DUAL_CW %>% mutate(group = 'DUAL_CW', dual = 1)
+  DUAL_CCW <- DUAL_CCW %>% mutate(group ='DUAL_CCW', dual = 1)
+  
+  CCW_ONLY$blockmean <- CCW_ONLY$blockmean*-1 # FLIP THE SIGNS
+  DUAL_CCW$blockmean <- DUAL_CCW$blockmean*-1
+
+  omni <- rbind(CW_ONLY, CCW_ONLY, DUAL_CW, DUAL_CCW)
+  omni <- omni %>% drop_na(blockmean) # NOTE FIX THIS MISSING VALUE!!!
+  omni$block <- as.factor(omni$block)
+  mod1 <- ezANOVA(data = omni,
+                  dv = blockmean,
+                  wid = participant,
+                  within=.(block),
+                  between=.(dual),
+                  detailed = TRUE,
+                  return_aov = TRUE)
+  
+  print(mod1)
   
   ################################
   ################################
