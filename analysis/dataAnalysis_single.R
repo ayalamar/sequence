@@ -250,6 +250,7 @@ getStatistics <- function(){
       filter(trial==0|trial==1|trial==2)
     
     inblock <- abs(mean(inblock$pv_angle, na.rm=TRUE))
+    print(inblock)
     
     finblock <- dfplot %>%
       filter(participant == ppno) %>%
@@ -257,7 +258,8 @@ getStatistics <- function(){
     
     finblock <- abs(mean(finblock$pv_angle, na.rm=TRUE))
     
-    y <- ((inblock - finblock)/inblock)*100
+    y <- ((inblock - finblock)/(30))*100 
+    #y <- ((inblock - finblock)/inblock)*100
     
     if (is.null(PI) == TRUE ) {
       PI <- y
@@ -291,7 +293,7 @@ getStatistics <- function(){
                   stroke = 0.3) +
     #geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
     ylab("Percentage Improvement") +
-    ggtitle("Single CCW Sequence") +
+    ggtitle("Single CW Sequence") +
     coord_fixed(ratio = 1/30) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_line(colour = "black"),

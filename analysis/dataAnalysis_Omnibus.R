@@ -1,5 +1,9 @@
 ##### OMNIBUS TESTS WITH BOTH SINGLE AND DUAL DATA
-setwd('/Users/mayala/Desktop/seq data')
+#setwd('/Users/mayala/Desktop/seq data')
+#setwd('/Users/mayala/Desktop/conseq data')
+#setwd('/Users/mayala/Desktop/static data')
+setwd('/Users/mayala/Desktop/explicit data')
+#setwd('/Users/mayala/Desktop/preq data')
 
 ##### 
 getOmniStats <- function(){
@@ -16,8 +20,12 @@ getOmniStats <- function(){
   # LOAD SINGLE LCs
   CW_ONLY <- read.csv("SINGLE_LCs_1.csv", header = TRUE)
   CCW_ONLY <- read.csv("SINGLE_LCs_-1.csv", header = TRUE)
+  CCW_ONLY$participant <- CCW_ONLY$participant + 10 # EZ NEEDS DISTINCT ID FOR EVERY DISTINCT PARTICIPANT  
+  
   DUAL_CW <- read.csv("DUAL_LCs_1.csv", header = TRUE)
+  DUAL_CW$participant <- DUAL_CW$participant + 20 # EZ NEEDS DISTINCT ID FOR EVERY DISTINCT PARTICIPANT
   DUAL_CCW <- read.csv("DUAL_LCs_-1.csv", header = TRUE)
+  DUAL_CCW$participant <- DUAL_CCW$participant + 20 # EZ NEEDS DISTINCT ID FOR EVERY DISTINCT PARTICIPANT
   
   CW_ONLY <- CW_ONLY %>% mutate(group = 'CW', dual = 0) %>% select(-rotation)
   CCW_ONLY <- CCW_ONLY %>% mutate(group = 'CCW', dual = 0) %>% select(-rotation)
@@ -28,13 +36,15 @@ getOmniStats <- function(){
   DUAL_CCW$blockmean <- DUAL_CCW$blockmean*-1
   
   omni <- rbind(CW_ONLY, CCW_ONLY, DUAL_CW, DUAL_CCW)
+  
   omni <- omni %>% drop_na(blockmean) # NOTE FIX THIS MISSING VALUE!!!
+  
   omni$block <- as.factor(omni$block)
+  
   mod1 <- ezANOVA(data = omni,
                   dv = blockmean, # pv angle
                   wid = participant,
-                  within = .(group), # Dual-CW, Dual-CCW, Single-CW, Single-CCW
-                  within_full = block, # 1, 2, 7
+                  within = block, # Dual-CW, Dual-CCW, Single-CW, Single-CCW
                   between = .(dual), # Dual vs. Single Conditions
                   detailed = TRUE,
                   return_aov = TRUE)

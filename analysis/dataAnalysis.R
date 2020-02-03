@@ -1,8 +1,8 @@
 ##### MASTER SCRIPT FOR ANALYSIS AND PLOTS FOR SEQ, CONSEQ, STATIC EXPERIMENTS
-setwd('/Users/mayala/Desktop/seq data')
+setwd('/Users/mayala/Desktop/conseq data')
 
-#subject_numbers <- c(1:7, 9:31) # CONSEQUENCE EXPERIMENT
-subject_numbers <- c(3:9, 11:17, 20:33) # SEQUENCE EXPERIMENT
+subject_numbers <- c(1:7, 9:31) # CONSEQUENCE EXPERIMENT
+#subject_numbers <- c(3:9, 11:17, 20:33) # SEQUENCE EXPERIMENT
 #subject_numbers <- c(1:12) # STATIC EXPERIMENT
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) 
 outfile_suffix <- sprintf('ALL')
@@ -80,7 +80,8 @@ getStatistics <- function(){
   library(ggplot2)
   library(gginnards)
   library(Hmisc)
-  
+  library(ggbeeswarm)
+
   filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
   
@@ -229,6 +230,22 @@ getStatistics <- function(){
       mutate(block = 2, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
       select(participant, block, blockmean) %>%
       distinct(participant, .keep_all = TRUE)
+    
+    # comparing learning before and after participants are made aware that the cursors are weird
+    # ppdf_final720 <- dfplot %>%
+    #   filter(trial %in% c((359-2):359)) %>%
+    #   group_by(participant) %>%
+    #   mutate(block = 6, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
+    #   select(participant, block, blockmean) %>%
+    #   distinct(participant, .keep_all = TRUE)
+    # ppdf7_24 <- dfplot %>%
+    #   group_by(participant) %>%
+    #   mutate(block = 8, blockmean = mean(pv_angle, na.rm = TRUE)) %>%
+    #   select(participant, block, blockmean) %>%
+    #   distinct(participant, .keep_all = TRUE)
+    # ytemp<- t.test(ppdf_final720$blockmean, ppdf7_24$blockmean, paired = TRUE)
+    # print(ytemp)
+    
     ppdf7 <- dfplot %>%
       group_by(participant) %>%
       filter(trial %in% c(max(trial), max(trial) - 1, max(trial) - 2)) %>%
@@ -243,8 +260,8 @@ getStatistics <- function(){
              sdpv = sd(blockmean, na.rm = TRUE),
              sem = sdpv/sqrt(length(unique(participant)))) 
     
-    outfile_name = sprintf('DUAL_LCs_%s.csv', rot)
-    write.csv(traindf, file = outfile_name, row.names = FALSE)  
+    #outfile_name = sprintf('DUAL_LCs_%s.csv', rot)
+    #write.csv(traindf, file = outfile_name, row.names = FALSE)  
     
     # block training plots
     bltrain <- ggplot(data=traindf, aes(x=block, y=pv)) +
@@ -264,40 +281,9 @@ getStatistics <- function(){
     move_layers(bltrain, "GeomRibbon", position = "top")
     move_layers(bltrain, "GeomPoint", position = "top")
     
+    out_name <- sprintf('DUAL_LCs_%s.csv', rot)
+    write.csv(traindf, out_name, row.names = FALSE)
   }
-  
-  ################################
-  ################################
-  ################################
-
-  # OMNIBUS TESTS
-  library(ez)
-  # LOAD SINGLE LCs
-  CW_ONLY <- read.csv("SINGLE_LCs_1.csv", header = TRUE)
-  CCW_ONLY <- read.csv("SINGLE_LCs_-1.csv", header = TRUE)
-  DUAL_CW <- read.csv("DUAL_LCs_1.csv", header = TRUE)
-  DUAL_CCW <- read.csv("DUAL_LCs_-1.csv", header = TRUE)
-  
-  CW_ONLY <- CW_ONLY %>% mutate(group = 'CW', dual = 0) %>% select(-rotation)
-  CCW_ONLY <- CCW_ONLY %>% mutate(group = 'CCW', dual = 0) %>% select(-rotation)
-  DUAL_CW <- DUAL_CW %>% mutate(group = 'DUAL_CW', dual = 1)
-  DUAL_CCW <- DUAL_CCW %>% mutate(group ='DUAL_CCW', dual = 1)
-  
-  CCW_ONLY$blockmean <- CCW_ONLY$blockmean*-1 # FLIP THE SIGNS
-  DUAL_CCW$blockmean <- DUAL_CCW$blockmean*-1
-
-  omni <- rbind(CW_ONLY, CCW_ONLY, DUAL_CW, DUAL_CCW)
-  omni <- omni %>% drop_na(blockmean) # NOTE FIX THIS MISSING VALUE!!!
-  omni$block <- as.factor(omni$block)
-  mod1 <- ezANOVA(data = omni,
-                  dv = blockmean,
-                  wid = participant,
-                  within=.(block),
-                  between=.(dual),
-                  detailed = TRUE,
-                  return_aov = TRUE)
-  
-  print(mod1)
   
   ################################
   ################################
@@ -326,7 +312,8 @@ getStatistics <- function(){
       filter(trial == 740|trial == 741|trial == 742) 
     
     finblock <- mean(finblock$pv_angle_n, na.rm = TRUE)
-    y <- ((inblock - finblock)/inblock)*100
+    y <- ((inblock - finblock)/30)*100
+    #y <- ((inblock - finblock)/inblock)*100
     
     if (is.null(PI) == TRUE ) {
       PI <- y
@@ -360,12 +347,12 @@ getStatistics <- function(){
                   stroke = 0.3) +
     #geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
     ylab("Percentage Improvement") +
-    ggtitle("Dual Conseq") +
+    ggtitle("Dual Static - PI relative to 30") +
     coord_fixed(ratio = 1/30) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), axis.line = element_line(colour = "black"),
-          legend.title = element_blank(), legend.position = "none") 
-    #scale_y_continuous(breaks = seq(-150, +150, 50), limits = c(-150,150))
+          legend.title = element_blank(), legend.position = "none") +
+  scale_y_continuous(breaks = seq(-150, +150, 50), limits = c(-150,150))
   
   #move_layers(PIplot,"GeomPoint", position = "bottom")
   

@@ -194,24 +194,9 @@ getStatistics <- function(){
       mutate(pv = mean(blockmean, na.rm = TRUE),
              sdpv = sd(blockmean, na.rm = TRUE),
              sem = sdpv/sqrt(length(unique(participant)))) 
-    # traindf <- dfplot %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
-    #                                                                               SEM_pl = SD_pl/sqrt(length(unique(participant))), Mean_pv = mean(pv_angle, na.rm=TRUE),                                                                                SD_pv = sd(pv_angle, na.rm=TRUE),SEM_pv = SD_pv/sqrt(length(unique(participant))))
-    # bl1 <- traindf[1:3,] %>% mutate(block = 1)
-    # bl2 <- traindf[4:6,] %>% mutate(block = 2)
-    # bll <- traindf[(nrow(traindf)-2):nrow(traindf),] %>% mutate(block = 7)
-    # combobl <- rbind(bl1, bl2, bll)
-    # combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
-    # 
-    # bltrain <- ggplot(data=combobl, aes(x=block, y=pv)) +
-    #   geom_point() +
-    #   geom_line(data=combobl, aes(x=block, y=pv)) +
-    #   geom_ribbon(data=combobl, aes(ymin=pv-sem, ymax= pv+sem), alpha=0.4) +
-    #   ylim(-50,50) +
-    #   xlim(1,7) +
-    #   coord_fixed(ratio = 1/7) +
-    #   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-    #         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-    #   ggtitle('Dual Lead-in - Blocked training')
+    
+    outfile_name = sprintf('DUAL_LCs_%s.csv', rot)
+    write.csv(traindf, file = outfile_name, row.names = FALSE)  
     
     bltrain <- ggplot(data=traindf, aes(x=block, y=pv)) +
       geom_point() +
@@ -266,7 +251,9 @@ getStatistics <- function(){
     inblock <- mean(inblock$pv_angle_n, na.rm=TRUE)
     finblock <- dfplot %>% filter(participant == ppno) %>% filter(trial == 740|trial==741|trial==742) 
     finblock <- mean(finblock$pv_angle_n, na.rm=TRUE)
-    y <- ((inblock - finblock)/inblock)*100
+    
+    y <- ((inblock - finblock)/30)*100
+    #y <- ((inblock - finblock)/inblock)*100
     
     if (is.null(PI) == TRUE ) {
       PI <- y
