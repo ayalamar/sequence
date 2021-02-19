@@ -1,6 +1,7 @@
 ##### FOR SINGLE CW AND CCW CONTROL GROUPS
-#setwd('/Users/mayala/Desktop/single CW data')
-setwd('/Users/mayala/Desktop/single CCW data')
+setwd('~/science/repos/sequence')
+setwd('single CW data')
+rm(list=ls())
 
 subject_numbers <- c(1:10) # SAME FOR SINGLE CW & CCW GROUPS
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
@@ -8,73 +9,222 @@ outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # IF THIS IS 0, NO SCALING WILL BE DONE IN TASKANALYSIS()
 
-##### FUNCTION FOR PLOTTING RAW DATA ONLY
+library(dplyr)
+library(ggplot2)
+library(svglite)
+library(gginnards)
+library(Hmisc)
+library(ggbeeswarm)
+library(tidyr)
+library(OneR)
+
+##### FUNCTION FOR PLOTTING BLOCKED RAW DATA & PI
 plotData <- function(){
   
-  library(dplyr)
-  library(ggplot2)
+  filename <- sprintf('md_analysis/allTaggedData_n%d_%s.csv',
+                      length(subject_numbers), outfile_suffix)
   
-  filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
   
   df <- df[-c(1),] # get rid of that random first row of NAs
   
+  df <- df %>%
+    group_by(participant) %>%
+    group_by(task) %>%
+    mutate(binno = bin(trial,  # make bins for plotting
+                       nbins = (max(trial)+1)/3,
+                       labels = c(1:((max(trial)+1)/3))))
+  
   # first replace outlier-tagged trials with NA so they don't get plotted
-  for (rowno in 1:nrow(df)) {
-    if (df$isoutlier[rowno] == TRUE) {
-      df$pathlength[rowno] <- NA
-      df$pv_angle[rowno] <- NA
-    }
-  }
+  # for (rowno in 1:nrow(df)) {
+  #   if (df$isoutlier[rowno] == TRUE) {
+  #     df$pathlength[rowno] <- NA
+  #     df$pv_angle[rowno] <- NA
+  #   }
+  # }
   
   tdf <- tbl_df(df) # convert to tibble for dplyr
   rotations <- sort(unique(tdf$garage_location)) # use this because no-cursor trials are labeled rotation = 0
+  # tdf <- tdf %>%
+  #   filter(participant != 6) %>% # super outlying participants for CCW
+  #   filter(participant != 7) %>% # super outlying participants for CCW
+  #   filter(participant != 7) %>% # super outlying participants for CW
+  #   filter(participant != 2) %>% # super outlying participants for CW
   
   for (rotationno in rotations) {
-    print(rotationno)
     
-    # filter by task
+    print(rotationno)
+
     for (taskno in sort(unique(tdf$task))) {
-      # this creates a column of MEANS for every trial -- use for plotting learning curves
-      dfname<- sprintf('rotation%d_task%d_means', rotationno, taskno)
+      # this creates a column of MEANS for every bin -- use for plotting learning curves
+      dfname <- sprintf('rotation%d_task%d_means', rotationno, taskno)
+      
       print(dfname)
       
-      ## NOTE: YOU NEED TO SUBTRACT baseline!!!! DO THIS HERE !! SUBTRACT PER ROTATION BASELINE VALUE
-      taskmeans<- tdf %>% filter(task==taskno) %>% filter(garage_location == rotationno) %>% group_by(participant) %>%
-        group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
-                                      SEM_pl = SD_pl/sqrt(length(unique(participant))),
-                                      Mean_pv = mean(pv_angle, na.rm=TRUE), SD_pv = sd(pv_angle, na.rm=TRUE),
-                                      SEM_pv = SD_pv/sqrt(length(unique(participant))))
+      taskmeans <- tdf %>%
+        filter(task == taskno) %>% 
+        filter(garage_location == rotationno) %>% 
+        group_by(participant) %>%
+        group_by(binno) %>%
+        summarise(Mean_pl = mean(pathlength, na.rm=TRUE),
+                  SD_pl = sd(pathlength, na.rm=TRUE),
+                  SEM_pl = SD_pl/sqrt(length(unique(participant))),
+                  Mean_pv = mean(pv_angle, na.rm=TRUE), 
+                  SD_pv = sd(pv_angle, na.rm=TRUE),
+                  SEM_pv = SD_pv/sqrt(length(unique(participant))))
       
       # plot each task learning curve
-      taskplot <- ggplot(data=taskmeans, aes(x=trial, y=Mean_pl)) +
+      taskplot <- ggplot(data = taskmeans, aes(x = binno, y = Mean_pv, group = 1)) +
         geom_line() + 
-        geom_ribbon(aes(ymin=Mean_pl-SEM_pl, ymax=Mean_pl+SEM_pl),
+        geom_ribbon(aes(ymin = Mean_pv-SEM_pv, ymax = Mean_pv+SEM_pv),
                     alpha=0.4) +
-        geom_line(data=taskmeans, aes(x=trial, y=Mean_pv), color="red") +
-        geom_ribbon(aes(ymin=Mean_pv-SEM_pv, ymax=Mean_pv+SEM_pv),
-                    alpha=0.4) +
-        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+        coord_fixed(ratio = 2) +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.background = element_blank(),
+              axis.line = element_line(colour = "black")) +
         ylim(-50, 50) +
-        scale_colour_manual("", values = c("Mean_pl"="black", "Mean_pv"="red")) +
+        ylab("Angular error (Degrees)") +
+        xlab("Block") +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.background = element_blank(),
+              axis.line = element_line(colour = "black")) +
         ggtitle(dfname)
       
-      print(taskplot)
+      # print(taskplot)
+      # plotfilename <- sprintf('md_analysis/Full_LCs_%s.svg', dfname)
+      # ggsave(file = plotfilename,
+      #        plot = taskplot,
+      #        height = 10, dpi = 96, units = "cm")
+            
     }
+    
+    if (rotationno == 1){
+      
+      PI_inblock <- tdf %>%
+        filter(task == 3) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == min(binno_no)) %>%
+        summarise(Mean_pv_inblock = mean(pv_angle, na.rm=TRUE))
+      
+      PI_midblock <- tdf %>%
+        filter(task == 3) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == max(binno_no)) %>%
+        summarise(Mean_pv_midblock = mean(pv_angle, na.rm=TRUE))
+      
+      PI_finblock <- tdf %>%
+        filter(task == 7) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == max(binno_no)) %>%
+        summarise(Mean_pv_finblock = mean(pv_angle, na.rm=TRUE))
+      
+      PI_df <- PI_inblock %>%
+        inner_join(PI_finblock) %>%
+        inner_join(PI_midblock) %>%
+        mutate(rot = rotationno,
+               PI_1 = ((Mean_pv_inblock - Mean_pv_midblock)/Mean_pv_inblock)*100,
+               PI_2 = ((Mean_pv_inblock - Mean_pv_finblock)/Mean_pv_inblock)*100,
+               PI_r30_1 = ((30 - Mean_pv_finblock)/30)*100,
+               PI_r30_2 = ((30 - Mean_pv_midblock)/30)*100)
+      
+    } else { 
+      
+      tdf$pv_angle_neg <- tdf$pv_angle*-1
+      
+      PI_inblock <- tdf %>%
+        filter(task == 3) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == min(binno_no)) %>%
+        summarise(Mean_pv_inblock = mean(pv_angle_neg, na.rm=TRUE))
+      
+      PI_midblock <- tdf %>%
+        filter(task == 3) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == max(binno_no)) %>%
+        summarise(Mean_pv_midblock = mean(pv_angle_neg, na.rm=TRUE))
+      
+      PI_finblock <- tdf %>%
+        filter(task == 7) %>%
+        filter(garage_location == rotationno) %>%
+        group_by(participant) %>%
+        mutate(binno_no = as.double(binno)) %>%
+        filter(binno_no == max(binno_no)) %>%
+        summarise(Mean_pv_finblock = mean(pv_angle_neg, na.rm=TRUE))
+      
+      PI_df <- PI_inblock %>%
+        inner_join(PI_finblock) %>%
+        inner_join(PI_midblock) %>%
+        mutate(rot = rotationno,
+               PI_1 = ((Mean_pv_inblock - Mean_pv_midblock)/Mean_pv_inblock)*100,
+               PI_2 = ((Mean_pv_inblock - Mean_pv_finblock)/Mean_pv_inblock)*100,
+               PI_r30_1 = ((30 - Mean_pv_finblock)/(30))*100,
+               PI_r30_2 = ((30 - Mean_pv_midblock)/(30))*100)
+      
+    }
+    
+
+    wholePI <- PI_df
+    wholePI$isoutlier <- FALSE # remove any intense outliers
+    wholePI$isoutlier[which(wholePI$PI_2 %in% boxplot(wholePI$PI_2)$out)] <- TRUE
+    
+    wholePI <- wholePI %>% 
+      filter(isoutlier == FALSE) %>%
+      group_by(rot) %>%
+      mutate(PImean = mean(PI_2, na.rm = TRUE),
+             PIsd = sd(PI_2, na.rm = TRUE),
+             SEM = PIsd/sqrt(length(unique(participant))))
+    
+    PIplot <- ggplot(data = wholePI, aes(x = rot, y = PImean, fill = rot)) +
+      stat_summary(fun.y = mean, geom = "bar", na.rm = TRUE) +
+      geom_errorbar(data = wholePI,
+                    mapping = aes(x = rot, y = PI_2,
+                                  ymin =PImean - SEM , ymax = PImean + SEM),
+                    width = 0.1, size = 0.5, color = "black",
+                    position = position_dodge(width = 0.9)) +
+      geom_beeswarm(data = wholePI, aes(x = rot, y = PI_2),
+                    alpha = 1/7,
+                    dodge.width = 2, cex = 3,
+                    stroke = 0.3) +
+      ylab("Percentage Improvement") +
+      ggtitle("PI relative to initial error") +
+      coord_fixed(ratio = 1/30) +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank(),
+            axis.line = element_line(colour = "black"),
+            legend.title = element_blank(),
+            legend.position = "none") +
+      scale_y_continuous(breaks = seq(-150, +150, 50), limits = c(-150, 200))
+    
+    print(PIplot)
+    plotfilename <- sprintf('md_analysis/PI_v2.svg')
+    ggsave(file = plotfilename,
+           plot = PIplot,
+           height = 10, dpi = 96, units = "cm")
+    
   }
+  
 }
+
+  
+  
 
 ##### FUNCTION FOR GETTING STATS AND CLEAN PLOTS
 getStatistics <- function(){
   
-  library(dplyr)
-  library(tidyr)
-  library(ggplot2)
-  library(gginnards)
-  library(ggbeeswarm)
-  
-  filename <- sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
+  filename <- sprintf('check/allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   df <- read.csv(filename, header = TRUE)
   
   df <- df[-c(1),] # get rid of that random first row of NAs
@@ -100,19 +250,25 @@ getStatistics <- function(){
     filter(task==0) %>%
     filter(trial %in% c(57,58,59)) %>%
     group_by(participant) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+    summarise(pv = mean(pv_angle, na.rm=TRUE),
+              pl = mean(pathlength, na.rm=TRUE),
+              block = mean(task))
   
   block1 <- tdf %>%
-    filter(task==3) %>%
+    filter(task == 3) %>%
     filter(trial %in% c(0,1,2)) %>%
     group_by(participant) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+    summarise(pv = mean(pv_angle, na.rm = TRUE),
+              pl = mean(pathlength, na.rm = TRUE),
+              block = mean(task))
   
   blocklast <- tdf %>%
-    filter(task==7) %>%
+    filter(task == 7) %>%
     filter(trial %in% c(10,11,12)) %>%
     group_by(participant) %>%
-    summarise(pv = mean(pv_angle, na.rm=TRUE), pl = mean(pathlength, na.rm=TRUE), block = mean(task))
+    summarise(pv = mean(pv_angle, na.rm=TRUE),
+              pl = mean(pathlength, na.rm=TRUE),
+              block = mean(task))
   
   adaptdf <- rbind(block1, blocklast)
   
@@ -121,8 +277,7 @@ getStatistics <- function(){
   
   RM_pv <- aov(pv ~ block + Error(participant/block), data=adaptdf)
   summary(RM_pv)
-  # RM_pl <- aov(pl ~ block + Error(participant/block), data=adaptdf)
-  # summary(RM_pl)
+
   
   # VISUALIZE LEARNING
 
@@ -141,27 +296,7 @@ getStatistics <- function(){
               SD_pv = sd(pv_angle, na.rm=TRUE),
               SEM_pv = SD_pv/sqrt(length(unique(participant))))
 
-#   Means <- ggplot(data=traindf, aes(x=trial, y=Mean_pv)) +
-#     geom_line() + 
-#     geom_ribbon(data=traindf, aes(ymin=Mean_pv-SEM_pv, ymax= Mean_pv+SEM_pv), alpha=0.4) +
-#     geom_point(data=tdfsmooth, aes(x=trial, y= pv_angle), colour='chartreuse1',alpha = 0.1) +
-#     #stat_smooth(method = "lm", formula = y ~ x + I(x^2), size = 1, linetype="dashed", color="blue", aes(outfit=fit<<-..y..),n=359) +
-#     #geom_line(aes(x=trial, y=exp(decay$fitted.values)), color = "red")
-#     #stat_smooth(method = "nls", formula = y ~ a * exp(-S * x), 
-#                 # method.args = list(start = list(a = 78, S = 0.02)), se = FALSE, #starting values obtained from fit above
-#                 # color = "dark red", linetype ="dashed")+
-#     ylim(-50, 50) +
-#     ggtitle('Single CW training') +
-#     ylab("Angular error (Degrees)") +
-#     xlab("Trial") +
-#     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#             panel.background = element_blank(), axis.line = element_line(colour = "black")) 
-#   print(Means)
-#   move_layers(Means,"GeomRibbon", position = "top")
-#   move_layers(Means,"GeomLine", position = "top")
-#   move_layers(Means,"GeomPoint", position = "bottom")
-  
-  ##plotting blocked training
+ ##plotting blocked training
   for (rot in sort(unique(tdf$garage_location))){
     
     dfplot1 <- tdf %>% filter(garage_location==rot) %>% filter(task == 3)
@@ -171,14 +306,6 @@ getStatistics <- function(){
     dfplot3$trial <- dfplot3$trial + 179 + 179
     dfplot <- rbind(dfplot1, dfplot2, dfplot3)
     
-    # traindf <- dfplot %>% group_by(participant) %>% group_by(trial) %>% summarise(Mean_pl = mean(pathlength, na.rm=TRUE),SD_pl = sd(pathlength, na.rm=TRUE),
-    #                                                                               SEM_pl = SD_pl/sqrt(length(unique(participant))), Mean_pv = mean(pv_angle, na.rm=TRUE),                                                                                SD_pv = sd(pv_angle, na.rm=TRUE),SEM_pv = SD_pv/sqrt(length(unique(participant))))
-    # bl1 <- traindf[1:3,] %>% mutate(block = 1)
-    # bl2 <- traindf[4:6,] %>% mutate(block = 2)
-    # bll <- traindf[(nrow(traindf)-2):nrow(traindf),] %>% mutate(block = 7)
-    # combobl <- rbind(bl1, bl2, bll)
-    # combobl <- combobl %>% group_by(block) %>% summarise(pv = mean(Mean_pv, na.rm=TRUE), sem = mean(SEM_pv,na.rm=TRUE))
-    # 
     ppdf1 <- dfplot %>%
       filter(trial %in% c(0,1,2)) %>%
       group_by(participant) %>%
@@ -209,11 +336,12 @@ getStatistics <- function(){
     bltrain <- ggplot(data=traindf, aes(x=block, y=pv)) +
       geom_point() +
       geom_line(data=traindf, aes(x=block, y=pv)) +
-      geom_line(data=ppdf_full, aes(x=block, y=blockmean, colour=as.factor(participant)), alpha = 0.1) + 
+      geom_line(data=ppdf_full, aes(x=block, y=blockmean, colour=as.factor(participant)), alpha = 0.3) + 
       geom_ribbon(data=traindf, aes(ymin=pv-sem, ymax= pv+sem), alpha=0.4) +
       coord_fixed(ratio = 1/7) +
       ylim(-50,50) +
-      xlim(1,7) +
+      scale_x_continuous(labels = c(0,1,2,3,4,5,6,7), breaks = c(0,1,2,3,4,5,6,7))+
+      #xlim(1,7) +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
             panel.background = element_blank(), axis.line = element_line(colour = "black"),
             legend.title = element_blank(), legend.position = "none") +
@@ -225,85 +353,10 @@ getStatistics <- function(){
     
     traindf <- traindf %>% # NEED THIS FOR OMNIBUS TESTS IN DUAL DATA ANALYSIS LATER
       mutate(rotation = rot)
-    outfile_name <- sprintf('SINGLE_LCs_%s.csv', rot)
-    write.csv(traindf, file = outfile_name, row.names = FALSE)  
+    #outfile_name <- sprintf('SINGLE_LCs_%s.csv', rot)
+    #write.csv(traindf, file = outfile_name, row.names = FALSE)  
   }
-  
-  ################################
-  ################################
-  ################################
-  
-  # ANALYZE PERCENT IMPROVEMENT
-  
-  PI <- c()
-  for (ppno in sort(unique(dfplot$participant))) {
-    
-    dfplot1 <- tdf  %>% filter(task == 3)
-    dfplot2 <- tdf  %>% filter(task == 5)
-    dfplot3 <- tdf  %>% filter(task == 7)
-    dfplot2$trial <- dfplot2$trial + 179
-    dfplot3$trial <- dfplot3$trial + 179 + 179
-    dfplot <- rbind(dfplot1, dfplot2, dfplot3)
-    
-    inblock <- dfplot %>%
-      filter(participant == ppno) %>%
-      filter(trial==0|trial==1|trial==2)
-    
-    inblock <- abs(mean(inblock$pv_angle, na.rm=TRUE))
-    print(inblock)
-    
-    finblock <- dfplot %>%
-      filter(participant == ppno) %>%
-      filter(trial == 368|trial==369|trial==370) 
-    
-    finblock <- abs(mean(finblock$pv_angle, na.rm=TRUE))
-    
-    y <- ((inblock - finblock)/(30))*100 
-    #y <- ((inblock - finblock)/inblock)*100
-    
-    if (is.null(PI) == TRUE ) {
-      PI <- y
-    } else {
-      PI <- c(PI, y)
-    }
-  }
-  
-  boxplot(PI) # CHECK FOR ANY OUTLIERS
-  
-  meanPI <- mean(PI, na.rm = TRUE)
-  semPI <- sd(PI, na.rm = TRUE)/sqrt(length(PI))
-  
-  t.test(PI, alternative = "greater") # IMPROVEMENT ACROSS TRAINING
-  
-  PI <- tbl_df(PI) # ADD LABELS TO PLOT
-  PI <- PI %>% mutate(participant = 1:n(),
-                      group = "sequence",
-                      lowerSEM = meanPI - semPI,
-                      upperSEM = meanPI + semPI)
-  
-  PIplot <- ggplot(data = PI, aes(x = group, y = value)) +
-    stat_summary(fun.y = mean, geom = "bar", na.rm = TRUE) +
-    geom_errorbar(data = PI, mapping = aes(x = group, y = value, 
-                                           ymin = PI$lowerSEM, ymax = PI$upperSEM),
-                  width = 0.1, size = 0.5, color = "black",
-                  position = position_dodge(width = 0.9)) +
-    geom_beeswarm(data = PI, aes(x = group, y = value),
-                  alpha = 1/7,
-                  dodge.width = 2, cex = 3,
-                  stroke = 0.3) +
-    #geom_point(data = PI, aes(x = group, y = value), size = 1, alpha = 1/20) +
-    ylab("Percentage Improvement") +
-    ggtitle("Single CW Sequence") +
-    coord_fixed(ratio = 1/30) +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_line(colour = "black"),
-          legend.title = element_blank(), legend.position = "none") +
-    scale_y_continuous(breaks = seq(-150, +150, 50), limits = c(-150,150))
-  
-  #move_layers(PIplot,"GeomPoint", position = "bottom")
-  
-  print(PIplot)
-  
+
   
   ################################
   ################################

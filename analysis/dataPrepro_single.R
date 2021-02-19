@@ -1,11 +1,15 @@
-# for single CW and CCW
-setwd('/Users/mayala/Desktop/single CCW data')
+# For prepping single CW and CCW data for analysis; run these functions in order
+setwd('~/science/repos/sequence')
+setwd('single CW data')
+rm(list=ls())
 
 subject_numbers <- c(1:10) # same for CW & CCW
 tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9) 
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
+
+library(dplyr)
 
 # TASK COMBINE SEQUENCE . M
 # AFTER having been selected, this combines all tasks per participant into one huge
@@ -36,16 +40,41 @@ taskCombine <- function() {
       taskdf$task <- taskno
       taskdf$pathlength <- NA
       taskdf$instruction <- NA
+      taskdf$angdev <- NA
       
-      ## calculate path length per trial and store it 
+      ## calculate error proxies (path length & ang deviation) per trial and store it 
       for (trialno in sort(unique(taskdf$trial))) {
         
         # select only the one current trial for analysis
         trialsamples <- taskdf[ which(taskdf$trial == trialno), ]
         
+        # calculate pathlength and store it in column "pathlength"
         trial_pathlength <- sum(sqrt(diff(trialsamples$cursorx)^2 + diff(trialsamples$cursory)^2))
         taskdf$pathlength[which(taskdf$trial == trialno)] <- trial_pathlength
-
+        
+        # calculate maximum angular deviation and store it in column "maxdev"
+        if (homey != 0) {
+          # calculate new target Y because (0,0) is not the origin/home
+          trialtemp <- trialsamples
+          trialtemp$newtargety <- trialtemp$targety + homey
+          trialtemp$newtargetangle <- (atan2(trialtemp$newtargety, trialtemp$targetx))/(pi/180)
+          # calculate new cursor Y because (0,0) is not origin/home
+          trialtemp$relativecursory <- trialtemp$cursory + homey
+          trialtemp$angdev_OG <- (atan2(trialtemp$relativecursory, trialtemp$cursorx))/(pi/180) 
+          # calculate angular deviation relative to target
+          trialtemp$angdev <- trialtemp$target_angle - trialtemp$angdev_OG 
+          trialsamples$angdev <- trialtemp$angdev
+        } else {
+          # no need to adjust y, calculate maxdev relative to target location and store it
+          trialtemp <- trialsamples
+          trialtemp$angdev_OG <- (atan2(trialtemp$cursory, trialtemp$cursorx))/(pi/180)
+          trialtemp$angdev <- trialtemp$target_angle - trialtemp$angdev_OG
+          trialsamples$angdev <- trialtemp$angdev
+        }
+        
+        # put back the angular deviations and ...
+        taskdf$angdev[which(taskdf$trial == trialno)] <- trialsamples$angdev
+        
         if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
             # print include or exclude for no-cursor tasks 8 & 9
             # if subject number is ODD, store exclude-include instruction sequence
@@ -59,7 +88,7 @@ taskCombine <- function() {
             taskdf$instruction[which(taskdf$task == 9)] <- 'exclude'
             
         }
-          
+        
       }
       
       if (is.data.frame(ppdf)==TRUE) {
@@ -73,7 +102,7 @@ taskCombine <- function() {
       }
     }
     
-    outfile_name = sprintf('combined_p0%02d_%s.csv', subject_id, outfile_suffix)
+    outfile_name = sprintf('md_analysis/combined_p0%02d_%s.csv', subject_id, outfile_suffix)
     write.csv(ppdf, file = outfile_name, row.names = FALSE)  
     
   }
@@ -91,10 +120,14 @@ taskPreprocess <- function() {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('combined_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/combined_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     taskdf <- read.csv(filename, header = TRUE)
+    taskdf <- taskdf %>%
+      group_by(task,trial) %>%
+      filter(step %in% c(2,3)) %>%
+      mutate(maxdev = max(abs(angdev), na.rm = TRUE))
     
     # create subset where you only select samples that occur at peak velocity
     pvsamples <- taskdf[ which(taskdf$selection_peakvel == 1), ]
@@ -122,7 +155,7 @@ taskPreprocess <- function() {
       
     }
     
-    outfile_name = sprintf('trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    outfile_name = sprintf('md_analysis/trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     
     write.csv(pvsamples, file = outfile_name, row.names = FALSE)  
   } 
@@ -136,7 +169,7 @@ tagOutliers <- function() {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     ppdf <- read.csv(filename, header = TRUE)
@@ -149,7 +182,7 @@ tagOutliers <- function() {
     #ppdf$pv_angle[which(ppdf$isoutlier == TRUE)] <- NA # NOTE : USING SIGNED ERRORS
     ppdf$pv_angle[which(ppdf$selection_1 != 1)] <- NA
     
-    outfile_name = sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    outfile_name = sprintf('md_analysis/tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     
     write.csv(ppdf, file = outfile_name, row.names = FALSE) 
     
@@ -164,7 +197,7 @@ combineTagged <- function() {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     ppdf <- read.csv(filename, header = TRUE)
@@ -181,7 +214,7 @@ combineTagged <- function() {
     
   }
   
-  outfile_name = sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
+  outfile_name = sprintf('md_analysis/allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   
   write.csv(groupdf, file = outfile_name, row.names = FALSE) 
   # note : this has a first row of NAs

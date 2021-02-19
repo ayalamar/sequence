@@ -1,14 +1,12 @@
 ### PLOT REACH TRAJECTORIES for DUAL groups
 setwd('~/science/repos/sequence')
-setwd('seq data')
+setwd('preq data')
 
-subject_numbers <- c(3:9, 11:17, 20:33) # SEQUENCE EXPERIMENT
-#subject_numbers <- c(1:7, 9:31) # CONSEQUENCE EXPERIMENT
-#subject_numbers <- c(1:12) # STATIC EXPERIMENT
+subject_numbers <- c(1:31)
 tasks <- c(0, 1, 3, 5, 6, 7, 10)
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
-homey <- c(7.3438) # if this is 0, no scaling will be done
+homey <- c(0) # if this is 0, no scaling will be done
 npoints <- 20 # how many points to interpolate for reach trajectory plots
 
 library(dplyr)
@@ -35,10 +33,11 @@ for (periodno in periods){
       print(filename)
       
       taskdf <- read.csv(filename, header = TRUE)
-
+      taskdf$garage_location <- taskdf$prehome
+      
       #get some excluded trials out
       taskdf <- taskdf %>% 
-        filter(step %in% c(1, 2)) %>% # get outward movement only
+        filter(step %in% c(0,1, 2)) %>% # get outward movement only
         filter(selection_1 == 1) %>% # no weird trials
         filter(selection_unsure == 0) %>% # no weird trials
         filter(garage_location == garageno)
@@ -191,7 +190,7 @@ for (periodno in periods){
         filter(task == tasknum)
       
       targetloc <- data.frame(
-        x0 = rep(12, 1),
+        x0 = rep(14.7, 1),
         y0 = rep(0, 1))
       
       homeloc <- data.frame(

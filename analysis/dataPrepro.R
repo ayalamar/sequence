@@ -1,13 +1,15 @@
 ######### MAKE CHANGES HERE ############
 ########################################
-setwd('/Users/mayala/Desktop/seq data')
+setwd('~/science/repos/sequence')
+setwd('explicit data')
+rm(list=ls())
 
-subject_numbers <- c(3:9, 11:17, 20:33) # seq experiment
+#subject_numbers <- c(3:9, 11:17, 20:33) # seq experiment
 #subject_numbers <- c(1:7, 9:31) ## conseq experiment
-#subject_numbers <- c(1:7,9:12,16) ## explicit experiment
+subject_numbers <- c(1:7,9:12,16) ## explicit experiment
 #subject_numbers <- c(1:12) ## static experiment
 #tasks <- c(0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12) ## THIS NEEDS TO CHANGE FOR EXPLICIT VERSION OF EXP (9 TASKS)
-#tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
+tasks <- c(0, 1, 2, 3, 4, 5, 6, 7, 8) ## for explicit experiment only
 outfile_suffix <- sprintf('ALL')
 homex <- c(0)
 homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
@@ -20,6 +22,7 @@ homey <- c(7.3438) # if this is 0, no scaling will be done in taskAnalysis()
 # participant file that includes ALL samples for every trial and block
 
 taskCombine <- function() {
+  
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
@@ -43,18 +46,42 @@ taskCombine <- function() {
       taskdf$task <- taskno
       taskdf$pathlength <- NA
       taskdf$instruction <- NA
+      taskdf$angdev <- NA # ma 01 14 21
+      taskdf$endpointang <- NA
       
-      ## calculate path length per trial and store it 
+      ## calculate error proxies (path length & ang deviation) per trial and store it 
       for (trialno in sort(unique(taskdf$trial))) {
         
         # select only the one current trial for analysis
         trialsamples <- taskdf[ which(taskdf$trial == trialno), ]
         
-        # create empty column to store pathlength values
-        
+        # calculate and store pathlength values
         trial_pathlength <- sum(sqrt(diff(trialsamples$cursorx)^2 + diff(trialsamples$cursory)^2))
         taskdf$pathlength[which(taskdf$trial == trialno)] <- trial_pathlength
         
+        # calculate angular deviation and store it in column "angdev"
+        if (homey != 0) {
+          # calculate new target Y because (0,0) is not the origin/home
+          trialtemp <- trialsamples
+          trialtemp$newtargety <- trialtemp$targety + homey
+          trialtemp$newtargetangle <- (atan2(trialtemp$newtargety, trialtemp$targetx))/(pi/180)
+          # calculate new cursor Y because (0,0) is not origin/home
+          trialtemp$relativecursory <- trialtemp$cursory + homey
+          trialtemp$angdev_OG <- (atan2(trialtemp$relativecursory, trialtemp$cursorx))/(pi/180) 
+          # calculate angular deviation relative to target
+          trialtemp$angdev <- trialtemp$target_angle - trialtemp$angdev_OG 
+          trialsamples$angdev <- trialtemp$angdev
+        } else {
+          # no need to adjust y, calculate maxdev relative to target location and store it
+          trialtemp <- trialsamples
+          trialtemp$angdev_OG <- (atan2(trialtemp$cursory, trialtemp$cursorx))/(pi/180)
+          trialtemp$angdev <- trialtemp$target_angle - trialtemp$angdev_OG
+          trialsamples$angdev <- trialtemp$angdev
+        }
+        
+        # put back the angular deviations (for later calculating maxdev)
+        taskdf$angdev[which(taskdf$trial == trialno)] <- trialsamples$angdev
+          
         # separate out labelling for implicit experiments and explicit experiment
         if (max(tasks)==12) { ## THIS IS AN IMPLICIT EXPERIMENT
           if (trialsamples$participant%%2 == 1) { # this is an ODD-numbered participant
@@ -103,7 +130,7 @@ taskCombine <- function() {
       }
     }
     
-    outfile_name = sprintf('combined_p0%02d_%s.csv', subject_id, outfile_suffix)
+    outfile_name = sprintf('md_analysis/combined_p0%02d_%s.csv', subject_id, outfile_suffix)
     write.csv(ppdf, file = outfile_name, row.names = FALSE)  
     
   }
@@ -116,14 +143,20 @@ taskCombine <- function() {
 
 # load the csv files you just made above ^
 taskPreprocess <- function() {
+  library(dplyr)
   for (ppno in 1:length(subject_numbers)) {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('combined_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/combined_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     taskdf <- read.csv(filename, header = TRUE)
+    taskdf <- taskdf %>%
+      group_by(task, trial) %>%
+      filter(step %in% c(2,3)) %>%
+      mutate(maxdev = max(abs(angdev), na.rm = TRUE)) %>%
+      mutate(endpointang = angdev[which(time == max(time))][1])
     
     # create subset where you only select samples that occur at peak velocity
     pvsamples <- taskdf[ which(taskdf$selection_peakvel == 1), ]
@@ -151,7 +184,7 @@ taskPreprocess <- function() {
       
     }
     
-    outfile_name = sprintf('trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    outfile_name = sprintf('md_analysis/trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     
     write.csv(pvsamples, file = outfile_name, row.names = FALSE)  
   } 
@@ -165,7 +198,7 @@ tagOutliers <- function() {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     ppdf <- read.csv(filename, header = TRUE)
@@ -179,7 +212,22 @@ tagOutliers <- function() {
     ppdf$pv_angle_n[which(ppdf$isoutlier == TRUE)] <- NA
     ppdf$pv_angle_n[which(ppdf$selection_1 != 1)] <- NA
     
-    outfile_name = sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    # tag maxdev outliers
+    outlier_values_md <- boxplot.stats(ppdf$maxdev)$out
+    ppdf$isoutlier_md <- FALSE
+    ppdf$isoutlier_md[which(ppdf$maxdev %in% outlier_values_md)] <- TRUE
+    
+    # tag pathlength outliers
+    outlier_values_pl <- boxplot.stats(ppdf$pathlength)$out
+    ppdf$isoutlier_pl <- FALSE
+    ppdf$isoutlier_pl[which(ppdf$pathlength %in% outlier_values_pl)] <- TRUE
+    
+    # tag endpointang outliers
+    outlier_values_ea <- boxplot.stats(ppdf$endpointang)$out
+    ppdf$isoutlier_ea <- FALSE
+    ppdf$isoutlier_ea[which(ppdf$endpointang %in% outlier_values_ea)] <- TRUE
+    
+    outfile_name = sprintf('md_analysis/tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     
     write.csv(ppdf, file = outfile_name, row.names = FALSE) 
     
@@ -194,7 +242,7 @@ combineTagged <- function() {
     
     subject_id <- subject_numbers[ppno]
     
-    filename <- sprintf('tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
+    filename <- sprintf('md_analysis/tagged_trialdata_p0%02d_%s.csv', subject_id, outfile_suffix)
     print(filename)
     
     ppdf <- read.csv(filename, header = TRUE)
@@ -210,8 +258,8 @@ combineTagged <- function() {
     }
     
   }
-  
-  outfile_name = sprintf('allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
+           
+  outfile_name = sprintf('md_analysis/allTaggedData_n%d_%s.csv', length(subject_numbers), outfile_suffix)
   
   write.csv(groupdf, file = outfile_name, row.names = FALSE) 
   # note : this has a first row of NAs
